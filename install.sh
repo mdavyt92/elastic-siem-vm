@@ -43,14 +43,14 @@ docker-compose -f create-certs.yml run --rm create_certs
 echo "Starting Elasticsearch..."
 docker-compose up -d elasticsearch
 
-popd
 
-echo "Waiting for Elasticsearch to start..."
+echo -n "Waiting for Elasticsearch to start..."
 status=1
 until [ $status -eq 0 ]
 do
   sleep 5
-  docker exec elasticsearch curl https://localhost:9200 -k > /dev/null
+  echo -n "."
+  docker exec elasticsearch curl https://elasticsearch:9200 -k >/dev/null 2>&1
   status=$?
 done
 
@@ -73,18 +73,23 @@ echo "Configuring encryption key for Kibana..."
 KIBANA_ENCRYPTION_KEY=`< /dev/urandom tr -dc _A-Z-a-z-0-9 | head -c${1:-32};echo`
 sed -i "s/%KIBANA_ENCRYPTION_KEY%/$KIBANA_ENCRYPTION_KEY/" /opt/elastic/kibana/config/kibana.yml
 
-echo "Copying services..."
-cp services/*.service /etc/systemd/system/
+echo "Starting Kibana..."
+docker-compose up -d kibana
 
-echo "Reloading systemctl daemon..."
-systemctl daemon-reload
+popd
 
-echo "Enabling services..."
-systemctl enable elasticsearch
-systemctl enable kibana
-systemctl enable logstash
+#echo "Copying services..."
+#cp services/*.service /etc/systemd/system/
 
-echo "Starting services..."
-systemctl start elasticsearch
-systemctl start kibana
-systemctl start logstash
+#echo "Reloading systemctl daemon..."
+#systemctl daemon-reload
+
+#echo "Enabling services..."
+#systemctl enable elasticsearch
+#systemctl enable kibana
+#systemctl enable logstash
+
+#echo "Starting services..."
+#systemctl start elasticsearch
+#systemctl start kibana
+#systemctl start logstash

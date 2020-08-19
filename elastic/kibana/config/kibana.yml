@@ -1,4 +1,6 @@
-elasticsearch.url: https://elasticsearch:9200
+server.name: kibana
+server.host: 0.0.0.0
+
 elasticsearch.hosts: [ "https://elasticsearch:9200" ]
 
 xpack.security.enabled: "true"

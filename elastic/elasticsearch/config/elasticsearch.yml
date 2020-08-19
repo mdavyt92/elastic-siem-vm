@@ -1,4 +1,5 @@
 node.name: elasticsearch
+network.host: 0.0.0.0
 discovery.type: single-node
 bootstrap.memory_lock: true
 
@@ -7,6 +8,7 @@ xpack.license.self_generated.type: basic
 xpack.security.enabled: true
 
 xpack.security.http.ssl.enabled: true
+xpack.security.http.ssl.verification_mode: certificate
 xpack.security.http.ssl.key: /usr/share/elasticsearch/config/certificates/elasticsearch/elasticsearch.key
 xpack.security.http.ssl.certificate_authorities: /usr/share/elasticsearch/config/certificates/ca/ca.crt
 xpack.security.http.ssl.certificate: /usr/share/elasticsearch/config/certificates/elasticsearch/elasticsearch.crt
