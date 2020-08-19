@@ -4,7 +4,7 @@ Requires=docker.service network-online.target
 After=docker.service network-online.target
 
 [Service]
-WorkingDirectory=/opt/elastic
+WorkingDirectory=/opt/docker-compose
 Type=simple
 TimeoutStartSec=15min
 Restart=always

@@ -29,8 +29,25 @@ fi
 echo "Copying files..."
 cp -r elastic /opt/elastic
 
+echo "Copying docker-compose files..."
+if [ -d /opt/docker-compose ]; then
+  rm -rf /opt/docker-compose
+fi
+cp -r docker-compose /opt/docker-compose
+
+echo "Setting Elastic password..."
+ELASTIC_PASSWORD=`< /dev/urandom tr -dc _A-Z-a-z-0-9 | head -c${1:-32};echo`
+echo "ELASTIC_PASSWORD=$ELASTIC_PASSWORD" | tee -a /opt/docker-compose/.env
+
+echo "Generating Kibana encryption key..."
+KIBANA_ENCRYPTION_KEY=`< /dev/urandom tr -dc _A-Z-a-z-0-9 | head -c${1:-32};echo`
+echo "KIBANA_ENCRYPTION_KEY=$KIBANA_ENCRYPTION_KEY" | tee -a /opt/docker-compose/.env
+
 echo "Copying service..."
 cp elastic.service /etc/systemd/system/
+
+echo "Generating Elastic certificates..."
+(cd /opt/docker-compose; docker-compose -f create-certs.yml run --rm create_certs)
 
 echo "Reloading systemctl daemon..."
 systemctl daemon-reload
@@ -40,3 +57,6 @@ systemctl enable elastic
 
 echo "Starting service..."
 systemctl start elastic
+
+echo "Setting password for kibana_system user..."
+docker exec elasticsearch bash -c "curl --user elastic:$ELASTIC_PASSWORD --cacert /usr/share/elasticsearch/config/certificates/ca/ca.crt  -XPOST -H 'Content-Type: application/json' https://localhost:9200/_security/user/kibana_system/_password -d '{ \"password\": \"$ELASTIC_PASSWORD\" }'"
