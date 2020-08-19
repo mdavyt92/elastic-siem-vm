@@ -29,7 +29,7 @@ fi
 echo "Copying files..."
 cp -r elastic /opt/elastic
 
-echo "Copying docker-compose files..."
+echo "Copying docker files..."
 if [ -d /opt/docker-compose ]; then
   rm -rf /opt/docker-compose
 fi
@@ -47,7 +47,7 @@ echo "Copying service..."
 cp elastic.service /etc/systemd/system/
 
 echo "Generating Elastic certificates..."
-(cd /opt/docker-compose; docker-compose -f create-certs.yml run --rm create_certs)
+docker-compose -f /opt/docker-compose/create-certs.yml run --rm create_certs
 
 echo "Reloading systemctl daemon..."
 systemctl daemon-reload

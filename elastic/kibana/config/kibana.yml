@@ -1,0 +1,12 @@
+elasticsearch.url: https://elasticsearch:9200
+elasticsearch.hosts: [ "https://elasticsearch:9200" ]
+
+xpack.security.enabled: "true"
+
+elasticsearch.username: kibana_system
+elasticsearch.password: %KIBANA_PASS%
+
+elasticsearch.ssl.certificateAuthorities: /usr/share/elasticsearch/config/certificates/ca/ca.crt
+elasticsearch.ssl.verificationMode: certificate
+
+xpack.encryptedSavedObjects.encryptionKey: %KIBANA_ENCRYPTION_KEY%
