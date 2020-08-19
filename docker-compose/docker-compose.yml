@@ -9,7 +9,8 @@ services:
         ELASTIC_VERSION: $ELASTIC_VERSION
     container_name: elasticsearch
     environment:
-      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+      ES_JAVA_OPTS: -Xms512m -Xmx512m
+      ELASTIC_PASSWORD: changeme
     ulimits:
       memlock:
         soft: -1

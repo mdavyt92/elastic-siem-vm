@@ -39,8 +39,17 @@ echo "Generating Elastic certificates..."
 docker-compose -f /opt/docker-compose/create-certs.yml run --rm create_certs
 
 echo "Starting Elasticsearch..."
-cd /opt/docker-compose
-docker-compose up -d elasticsearch
+docker-compose -f /opt/docker-compose/docker-compose.yml up -d elasticsearch
+
+echo "Waiting for container to start..."
+started=0
+until $started
+do
+  sleep 2
+  if docker ps | grep -q elasticsearch; then
+    started=1
+  fi
+done
 
 echo "Setting passwords for built-in users..."
 docker exec elasticsearch bin/elasticsearch-setup-passwords auto --batch |
@@ -50,6 +59,9 @@ docker exec elasticsearch bin/elasticsearch-setup-passwords auto --batch |
   tee /opt/elastic/.passwords
 
 source /opt/elastic/.passwords
+
+echo "Removing default password..."
+sed -i '/ELASTIC_PASSWORD/d' /opt/docker-compose/docker-compose.yml
 
 echo "Configuring password for Kibana..."
 sed -i "s/%KIBANA_PASS%/$kibana_system_password/" /opt/elastic/kibana/config/kibana.yml
