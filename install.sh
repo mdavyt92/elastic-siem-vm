@@ -35,20 +35,23 @@ if [ -d /opt/docker-compose ]; then
 fi
 cp -r docker-compose /opt/docker-compose
 
+pushd /opt/docker-compose
+
 echo "Generating Elastic certificates..."
-docker-compose -f /opt/docker-compose/create-certs.yml run --rm create_certs
+docker-compose -f create-certs.yml run --rm create_certs
 
 echo "Starting Elasticsearch..."
-docker-compose -f /opt/docker-compose/docker-compose.yml up -d elasticsearch
+docker-compose up -d elasticsearch
 
-echo "Waiting for container to start..."
-started=0
-until $started
+popd
+
+echo "Waiting for Elasticsearch to start..."
+status=1
+until [ $status -eq 0 ]
 do
-  sleep 2
-  if docker ps | grep -q elasticsearch; then
-    started=1
-  fi
+  sleep 5
+  docker exec elasticsearch curl https://localhost:9200 -k > /dev/null
+  status=$?
 done
 
 echo "Setting passwords for built-in users..."
