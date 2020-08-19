@@ -1,0 +1,23 @@
+[Unit]
+Description=elasticsearch
+Requires=docker.service network-online.target
+After=docker.service network-online.target
+
+[Service]
+WorkingDirectory=/opt/docker-compose
+Type=simple
+TimeoutStartSec=15min
+Restart=always
+
+ExecStartPre=/usr/bin/docker-compose pull --quiet --ignore-pull-failures elasticsearch
+ExecStartPre=/usr/bin/docker-compose build --pull elasticsearch
+
+ExecStart=/usr/bin/docker-compose up --remove-orphans elasticsearch
+
+ExecStop=/usr/bin/docker-compose down --remove-orphans elasticsearch
+
+ExecReload=/usr/bin/docker-compose pull --quiet --ignore-pull-failures elasticsearch
+ExecReload=/usr/bin/docker-compose build --pull elasticsearch
+
+[Install]
+WantedBy=multi-user.target

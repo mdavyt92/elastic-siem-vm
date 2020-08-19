@@ -35,28 +35,41 @@ if [ -d /opt/docker-compose ]; then
 fi
 cp -r docker-compose /opt/docker-compose
 
-echo "Setting Elastic password..."
-ELASTIC_PASSWORD=`< /dev/urandom tr -dc _A-Z-a-z-0-9 | head -c${1:-32};echo`
-echo "ELASTIC_PASSWORD=$ELASTIC_PASSWORD" | tee -a /opt/docker-compose/.env
-
-echo "Generating Kibana encryption key..."
-KIBANA_ENCRYPTION_KEY=`< /dev/urandom tr -dc _A-Z-a-z-0-9 | head -c${1:-32};echo`
-echo "KIBANA_ENCRYPTION_KEY=$KIBANA_ENCRYPTION_KEY" | tee -a /opt/docker-compose/.env
-
-echo "Copying service..."
-cp elastic.service /etc/systemd/system/
-
 echo "Generating Elastic certificates..."
 docker-compose -f /opt/docker-compose/create-certs.yml run --rm create_certs
+
+echo "Starting Elasticsearch..."
+cd /opt/docker-compose
+docker-compose up -d elasticsearch
+
+echo "Setting passwords for built-in users..."
+docker exec elasticsearch bin/elasticsearch-setup-passwords auto --batch |
+  grep PASSWORD |
+  sed 's/PASSWORD //' |
+  sed 's/ = /_password=/' |
+  tee /opt/elastic/.passwords
+
+source /opt/elastic/.passwords
+
+echo "Configuring password for Kibana..."
+sed -i "s/%KIBANA_PASS%/$kibana_system_password/" /opt/elastic/kibana/config/kibana.yml
+
+echo "Configuring encryption key for Kibana..."
+KIBANA_ENCRYPTION_KEY=`< /dev/urandom tr -dc _A-Z-a-z-0-9 | head -c${1:-32};echo`
+sed -i "s/%KIBANA_ENCRYPTION_KEY%/$KIBANA_ENCRYPTION_KEY/" /opt/elastic/kibana/config/kibana.yml
+
+echo "Copying services..."
+cp services/*.service /etc/systemd/system/
 
 echo "Reloading systemctl daemon..."
 systemctl daemon-reload
 
-echo "Enabling service..."
-systemctl enable elastic
+echo "Enabling services..."
+systemctl enable elasticsearch
+systemctl enable kibana
+systemctl enable logstash
 
-echo "Starting service..."
-systemctl start elastic
-
-echo "Setting password for kibana_system user..."
-docker exec elasticsearch bash -c "curl --user elastic:$ELASTIC_PASSWORD --cacert /usr/share/elasticsearch/config/certificates/ca/ca.crt  -XPOST -H 'Content-Type: application/json' https://localhost:9200/_security/user/kibana_system/_password -d '{ \"password\": \"$ELASTIC_PASSWORD\" }'"
+echo "Starting services..."
+systemctl start elasticsearch
+systemctl start kibana
+systemctl start logstash
