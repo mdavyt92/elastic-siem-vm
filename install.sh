@@ -26,10 +26,10 @@ then
   fi
 fi
 
-echo "Copying files..."
+echo "Copying Elastic Stack files..."
 cp -r elastic /opt/elastic
 
-echo "Copying docker files..."
+echo "Copying Docker files..."
 if [ -d /opt/docker-compose ]; then
   rm -rf /opt/docker-compose
 fi

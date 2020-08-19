@@ -4,12 +4,11 @@ services:
 
   elasticsearch:
     build:
-      context: elasticsearch
+      context: elasticsearch/
       args:
         ELASTIC_VERSION: $ELASTIC_VERSION
     container_name: elasticsearch
     environment:
-      - ELASTIC_PASSWORD=$ELASTIC_PASSWORD
       - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
     ulimits:
       memlock:
@@ -25,7 +24,10 @@ services:
       - elknet
 
   kibana:
-    image: docker.elastic.co/kibana/kibana:7.8.1
+    build:
+      context: kibana/
+      args:
+        ELASTIC_VERSION: $ELASTIC_VERSION
     container_name: kibana
     ports:
       - 5601:5601
@@ -38,7 +40,10 @@ services:
       - elasticsearch
 
   logstash:
-    image: docker.elastic.co/logstash/logstash:7.8.1
+    build:
+      context: logstash/
+      args:
+        ELASTIC_VERSION: $ELASTIC_VERSION
     container_name: logstash
     ports:
       - 9600:9600
