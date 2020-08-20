@@ -5,91 +5,196 @@ if [[ $EUID -ne 0 ]]; then
    exit 1
 fi
 
-DIR=$(dirname $0)
+install_docker() {
+  echo "Updating package list..."
+  apt -y update
 
-echo "Updating package list..."
-apt -y update
+  echo "Installing docker..."
+  apt -y install docker.io docker-compose
+}
 
-echo "Installing docker..."
-apt -y install docker.io docker-compose
-
-if [ -e /opt/elastic ]
-then
-  read -p "Directory /opt/elastic exists. Do you want to delete it? " -r
-  echo
-  if [[ $REPLY =~ ^[Yy]$ ]]
+copy_files() {
+  if [ -e /opt/elastic ]
   then
-    rm -rf /opt/elastic
-  else
-    echo "Operation cancelled"
-    exit
+    read -p "Directory /opt/elastic exists. Do you want to delete it? " -r
+    echo
+    if [[ $REPLY =~ ^[Yy]$ ]]
+    then
+      rm -rf /opt/elastic
+    else
+      echo "Keeping old files"
+    fi
   fi
-fi
 
-echo "Copying Elastic Stack files..."
-cp -r elastic /opt/elastic
+  echo "Copying Elastic Stack files..."
+  cp -r elastic /opt/elastic
 
-echo "Copying Docker files..."
-if [ -d /opt/docker-compose ]; then
-  rm -rf /opt/docker-compose
-fi
-cp -r docker-compose /opt/docker-compose
+  echo "Copying Docker files..."
+  if [ -d /opt/docker-compose ]; then
+    rm -rf /opt/docker-compose
+  fi
+  cp -r docker-compose /opt/docker-compose
+}
 
-pushd /opt/docker-compose
+install_elasticsearch() {
+  pushd /opt/docker-compose
 
-echo "Generating Elastic certificates..."
-docker-compose -f create-certs.yml run --rm create_certs
+  echo "Generating Elastic certificates..."
+  docker-compose -f create-certs.yml run --rm create_certs
 
-echo "Starting Elasticsearch..."
-docker-compose up -d elasticsearch
+  echo "Starting Elasticsearch..."
+  docker-compose up -d elasticsearch
 
 
-echo -n "Waiting for Elasticsearch to start..."
-status=1
-until [ $status -eq 0 ]
-do
-  sleep 5
-  echo -n "."
-  docker exec elasticsearch curl https://elasticsearch:9200 -k >/dev/null 2>&1
-  status=$?
-done
+  echo -n "Waiting for Elasticsearch to start..."
+  status=1
+  until [ $status -eq 0 ]
+  do
+    sleep 5
+    echo -n "."
+    docker exec elasticsearch curl https://elasticsearch:9200 -k >/dev/null 2>&1
+    status=$?
+  done
 
-echo "Setting passwords for built-in users..."
-docker exec elasticsearch bin/elasticsearch-setup-passwords auto --batch |
-  grep PASSWORD |
-  sed 's/PASSWORD //' |
-  sed 's/ = /_password=/' |
-  tee /opt/elastic/.passwords
+  echo "Setting passwords for built-in users..."
+  docker exec elasticsearch bin/elasticsearch-setup-passwords auto --batch |
+    grep PASSWORD |
+    sed 's/PASSWORD //' |
+    sed 's/ = /_password=/' |
+    tee /opt/elastic/.passwords
 
-source /opt/elastic/.passwords
+  echo "Removing default password..."
+  sed -i '/ELASTIC_PASSWORD/d' /opt/docker-compose/docker-compose.yml
 
-echo "Removing default password..."
-sed -i '/ELASTIC_PASSWORD/d' /opt/docker-compose/docker-compose.yml
+  popd
+}
 
-echo "Configuring password for Kibana..."
-sed -i "s/%KIBANA_PASS%/$kibana_system_password/" /opt/elastic/kibana/config/kibana.yml
+install_kibana() {
+  read -p "Do you want to install Kibana? " -r
+  echo
+  if [[ ! $REPLY =~ ^[Yy]$ ]]
+  then
+    break
+  fi
 
-echo "Configuring encryption key for Kibana..."
-KIBANA_ENCRYPTION_KEY=`< /dev/urandom tr -dc _A-Z-a-z-0-9 | head -c${1:-32};echo`
-sed -i "s/%KIBANA_ENCRYPTION_KEY%/$KIBANA_ENCRYPTION_KEY/" /opt/elastic/kibana/config/kibana.yml
+  pushd /opt/docker-compose
 
-echo "Starting Kibana..."
-docker-compose up -d kibana
+  source /opt/elastic/.passwords
 
-popd
+  echo "Configuring password for Kibana..."
+  sed -i "s/%KIBANA_PASS%/$kibana_system_password/" /opt/elastic/kibana/config/kibana.yml
 
-#echo "Copying services..."
-#cp services/*.service /etc/systemd/system/
+  echo "Configuring encryption key for Kibana..."
+  KIBANA_ENCRYPTION_KEY=`< /dev/urandom tr -dc _A-Z-a-z-0-9 | head -c${1:-32};echo`
+  sed -i "s/%KIBANA_ENCRYPTION_KEY%/$KIBANA_ENCRYPTION_KEY/" /opt/elastic/kibana/config/kibana.yml
 
-#echo "Reloading systemctl daemon..."
-#systemctl daemon-reload
+  echo "Starting Kibana..."
+  docker-compose up -d kibana
 
-#echo "Enabling services..."
-#systemctl enable elasticsearch
-#systemctl enable kibana
-#systemctl enable logstash
+  popd
+}
 
-#echo "Starting services..."
-#systemctl start elasticsearch
-#systemctl start kibana
-#systemctl start logstash
+install_services() {
+  read -p "Do you want to install services for elasticsearch, logstash and kibana? " -r
+  echo
+  if [[ ! $REPLY =~ ^[Yy]$ ]]
+  then
+    break
+  fi
+
+  echo "Copying services..."
+  cp services/*.service /etc/systemd/system/
+
+  echo "Reloading systemctl daemon..."
+  systemctl daemon-reload
+}
+
+install_apache(){
+  read -p "Do you want to install and configure an Apache Reverse Proxy? " -r
+  echo
+  if [[ ! $REPLY =~ ^[Yy]$ ]]
+  then
+    return
+  fi
+
+  echo "Installing apache..."
+  apt install apache2
+
+  echo "Removing default configuration..."
+  rm -f /etc/apache2/sites-enabled/*
+
+  echo "Copying configuration files..."
+  cp apache/sites-available/* /etc/apache2/sites-available/
+  cp apache/conf-available/* /etc/apache2/conf-available/
+
+  echo "Generating self-signed certificate..."
+  mkdir /etc/apache2/certs
+  openssl req -x509 -nodes -days 365 -newkey rsa:2048 -keyout /etc/apache2/certs/selfsigned.key -out /etc/apache2/certs/selfsigned.crt
+
+  echo "Select your preferred TLS configuration:"
+  tls_high="Modern (highest security, highest compatibility): Supports Firefox 63, Android 10.0, Chrome 70, Edge 75, Java 11, OpenSSL 1.1.1, Opera 57, and Safari 12.1"
+  tls_med="Intermediate (recommended for most cases): Supports Firefox 27, Android 4.4.2, Chrome 31, Edge, IE 11 on Windows 7, Java 8u31, OpenSSL 1.0.1, Opera 20, and Safari 9"
+  tls_low="Old (lowest security, highest compatibility): Supports Firefox 1, Android 2.3, Chrome 1, Edge 12, IE8 on Windows XP, Java 6, OpenSSL 0.9.8, Opera 5, and Safari 1"
+  select tlslevel in "$tls_high" "$tls_med" "$tls_low"; do
+    case $tlslevel in
+      ${tls_high} ) TLS_LEVEL="high"; break;;
+      ${tls_med} ) TLS_LEVEL="medium"; break;;
+      ${tls_low} ) TLS_LEVEL="low"; break;;
+      * ) echo "Please select a valid option.";
+    esac
+  done
+
+  echo "Configuring selected TLS profile..."
+  sed -i 's/%TLSLEVEL%/$TLS_LEVEL/' /etc/apache2/sites-available/kibana.conf
+
+  echo "Enabling required modules..."
+  a2enmod ssl rewrite headers socache_shmcb
+
+  echo "Enabling site..."
+  ln -s /etc/apache2/sites-available/kibana.conf /etc/apache2/sites-enabled/kibana.conf
+
+  echo "Restarting apache..."
+  systemctl restart apache2
+
+  echo "Allowing Apache through the firewall..."
+  ufw allow http
+  ufw allow https
+}
+
+configure_firewall(){
+  echo "Configuring Firewall policy..."
+  ufw default deny incoming
+  ufw default allow outgoing
+
+  echo "Allowing SSH Connections through the firewall..."
+  ufw allow ssh
+
+  read "Allow Elasticsearch to be accessed remotely? " -r
+  if  [[ $REPLY =~ ^[Yy]$ ]]
+  then
+    ufw allow 9200
+  fi
+
+  read "Allow Logstash to be accessed remotely? " -r
+  if  [[ $REPLY =~ ^[Yy]$ ]]
+  then
+    ufw allow 5044
+  fi
+
+  read "Allow Kibana to be accessed remotely? (Not recommended if you installed Apache) " -r
+  if  [[ $REPLY =~ ^[Yy]$ ]]
+  then
+    ufw allow 5601
+  fi
+
+  echo "Enabling firewall..."
+  ufw enable
+}
+
+install_docker
+copy_files
+install_elasticsearch
+install_kibana
+install_services
+install_apache
+configure_firewall
