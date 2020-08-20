@@ -74,7 +74,7 @@ install_kibana() {
   echo
   if [[ ! $REPLY =~ ^[Yy]$ ]]
   then
-    break
+    return
   fi
 
   pushd /opt/docker-compose
@@ -99,7 +99,7 @@ install_services() {
   echo
   if [[ ! $REPLY =~ ^[Yy]$ ]]
   then
-    break
+    return
   fi
 
   echo "Copying services..."
@@ -145,10 +145,10 @@ install_apache(){
   done
 
   echo "Configuring selected TLS profile..."
-  sed -i 's/%TLSLEVEL%/$TLS_LEVEL/' /etc/apache2/sites-available/kibana.conf
+  sed -i "s/%TLS_LEVEL%/$TLS_LEVEL/" /etc/apache2/sites-available/kibana.conf
 
   echo "Enabling required modules..."
-  a2enmod ssl rewrite headers socache_shmcb
+  a2enmod ssl rewrite headers socache_shmcb proxy proxy_http
 
   echo "Enabling site..."
   ln -s /etc/apache2/sites-available/kibana.conf /etc/apache2/sites-enabled/kibana.conf
@@ -169,19 +169,19 @@ configure_firewall(){
   echo "Allowing SSH Connections through the firewall..."
   ufw allow ssh
 
-  read "Allow Elasticsearch to be accessed remotely? " -r
+  read -p "Allow Elasticsearch to be accessed remotely? " -r
   if  [[ $REPLY =~ ^[Yy]$ ]]
   then
     ufw allow 9200
   fi
 
-  read "Allow Logstash to be accessed remotely? " -r
+  read -p "Allow Logstash to be accessed remotely? " -r
   if  [[ $REPLY =~ ^[Yy]$ ]]
   then
     ufw allow 5044
   fi
 
-  read "Allow Kibana to be accessed remotely? (Not recommended if you installed Apache) " -r
+  read -p "Allow Kibana to be accessed remotely? (Not recommended if you installed Apache) " -r
   if  [[ $REPLY =~ ^[Yy]$ ]]
   then
     ufw allow 5601
