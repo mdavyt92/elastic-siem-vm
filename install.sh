@@ -98,6 +98,8 @@ install_kibana() {
   docker-compose up -d kibana
 
   popd
+
+  KIBANA_INSTALLED=true
 }
 
 install_logstash() {
@@ -119,6 +121,8 @@ install_logstash() {
   docker-compose up -d logstash
 
   popd
+
+  LOGSTASH_INSTALLED=true
 }
 
 install_services() {
@@ -130,10 +134,22 @@ install_services() {
   fi
 
   echo "Copying services..."
-  cp services/*.service /etc/systemd/system/
+  cp services/elasticsearch.service /etc/systemd/system/
+  $KIBANA_INSTALLED && cp services/kibana.service /etc/systemd/system/
+  $LOGSTASH_INSTALLED && cp services/logstash.service /etc/systemd/system/
 
   echo "Reloading systemctl daemon..."
   systemctl daemon-reload
+
+  echo "Stopping containers..."
+  pushd /opt/docker-compose
+  docker-compose down
+  popd
+
+  echo "Starting and enabling services..."
+  systemctl enable elasticsearch && systemctl start elasticsearch
+  $KIBANA_INSTALLED && systemctl enable kibana && systemctl start kibana
+  $LOGSTASH_INSTALLED && systemctl enable logstash && systemctl start logstash
 }
 
 install_apache(){
