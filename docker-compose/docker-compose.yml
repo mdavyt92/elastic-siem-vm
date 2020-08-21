@@ -50,6 +50,7 @@ services:
       - 9600:9600
       - 5044:5044
     volumes:
+      - certs:/usr/share/elasticsearch/config/certificates
       - /opt/elastic/logstash/config/logstash.yml:/usr/share/logstash/config/logstash.yml
       - /opt/elastic/logstash/pipeline:/usr/share/logstash/pipeline
     environment:
