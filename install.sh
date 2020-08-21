@@ -13,6 +13,16 @@ install_docker() {
   apt -y install docker.io docker-compose
 }
 
+wait_elastic() {
+  echo -n "Waiting for Elasticsearch to be ready..."
+  while true
+  do
+    echo -n "."
+    docker exec elasticsearch curl https://elasticsearch:9200 -k >/dev/null 2>&1
+    [ $? -eq 0 ] && echo "done" && return || sleep 5
+  done
+}
+
 copy_files() {
   if [ -e /opt/elastic ]
   then
@@ -45,16 +55,7 @@ install_elasticsearch() {
   echo "Starting Elasticsearch..."
   docker-compose up -d elasticsearch
 
-  echo -n "Waiting for Elasticsearch to start..."
-  status=1
-  until [ $status -eq 0 ]
-  do
-    sleep 5
-    echo -n "."
-    docker exec elasticsearch curl https://elasticsearch:9200 -k >/dev/null 2>&1
-    status=$?
-  done
-  echo "done"
+  wait_elastic
 
   echo "Setting passwords for built-in users..."
   docker exec elasticsearch bin/elasticsearch-setup-passwords auto --batch |
@@ -81,6 +82,8 @@ install_kibana() {
   pushd /opt/docker-compose
 
   source /opt/elastic/.passwords
+
+  wait_elastic
 
   echo "Configuring user for Kibana..."
   read -p "Username: " kibana_user
@@ -112,6 +115,8 @@ install_logstash() {
   pushd /opt/docker-compose
 
   source /opt/elastic/.passwords
+
+  wait_elastic
 
   echo "Creating role for Logstash user..."
   docker exec elasticsearch curl \
