@@ -1,4 +1,10 @@
 #!/bin/bash
+
+if [[ $EUID -ne 0 ]]; then
+   echo "This script must be run as root"
+   exit 1
+fi
+
 echo "##########################################################################"
 echo "## WARNING: THIS WILL DELETE ALL ELK CONTAINERS AND CONFIGURATION FILES ##"
 echo "##########################################################################"
@@ -8,8 +14,8 @@ echo
 if [[ $REPLY != "YES" ]]
 then
   echo "Exiting..."
-  exit
-else
+  exit 1
+fi
 
 echo "Stopping all containers"
 docker stop $(docker ps -a -q)
