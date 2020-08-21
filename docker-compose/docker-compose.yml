@@ -17,6 +17,7 @@ services:
         hard: -1
     volumes:
       - esdata:/usr/share/elasticsearch/data
+      - esconfig:/usr/share/elasticsearch/config
       - certs:/usr/share/elasticsearch/config/certificates
       - /opt/elastic/elasticsearch/config/elasticsearch.yml:/usr/share/elasticsearch/config/elasticsearch.yml
     ports:
@@ -60,6 +61,8 @@ services:
 
 volumes:
   esdata:
+    driver: local
+  esconfig:
     driver: local
   certs:
     driver: local
