@@ -62,9 +62,14 @@ install_elasticsearch() {
     sed 's/PASSWORD //' |
     sed 's/ = /_password=/' |
     tee /opt/elastic/.passwords
+  chmod 0400 /opt/elastic/.passwords
 
   echo "Removing default password..."
   sed -i '/ELASTIC_PASSWORD/d' /opt/docker-compose/docker-compose.yml
+
+  echo "Configuring user for Kibana..."
+  read -p "Username: " kibana_user
+  docker exec -it elasticsearch bin/elasticsearch-users useradd $kibana_user -r kibana_admin
 
   popd
 }
@@ -90,6 +95,27 @@ install_kibana() {
 
   echo "Starting Kibana..."
   docker-compose up -d kibana
+
+  popd
+}
+
+install_logstash() {
+  read -p "Do you want to install Logstash? " -r
+  echo
+  if [[ ! $REPLY =~ ^[Yy]$ ]]
+  then
+    return
+  fi
+
+  pushd /opt/docker-compose
+
+  source /opt/elastic/.passwords
+
+  echo "Configuring password for Logstash..."
+  sed -i "s/%LOGSTASH_PASS%/$logstash_system_password/" /opt/elastic/logstash/pipeline/*.conf
+
+  echo "Starting Logstash..."
+  docker-compose up -d logstash
 
   popd
 }
@@ -223,10 +249,20 @@ EOF
   systemctl restart ufw
 }
 
+# Pre installation
 install_docker
 copy_files
+
+# ELK Stack
 install_elasticsearch
 install_kibana
+install_logstash
+
+# Services for starting/stopping the stack
 install_services
+
+# Apache Reverse Proxy
 install_apache
+
+# Firewall
 configure_firewall
