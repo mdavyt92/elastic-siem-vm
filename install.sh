@@ -14,6 +14,7 @@ install_docker() {
 }
 
 copy_files() {
+  echo "Copying Elastic Stack files..."
   if [ -e /opt/elastic ]
   then
     read -p "Directory /opt/elastic exists. Do you want to delete it? " -r
@@ -21,13 +22,13 @@ copy_files() {
     if [[ $REPLY =~ ^[Yy]$ ]]
     then
       rm -rf /opt/elastic
+      cp -r elastic /opt/elastic
     else
       echo "Keeping old files"
     fi
+  else
+    cp -r elastic /opt/elastic
   fi
-
-  echo "Copying Elastic Stack files..."
-  cp -r elastic /opt/elastic
 
   echo "Copying Docker files..."
   if [ -d /opt/docker-compose ]; then
