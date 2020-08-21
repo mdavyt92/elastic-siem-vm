@@ -45,7 +45,6 @@ install_elasticsearch() {
   echo "Starting Elasticsearch..."
   docker-compose up -d elasticsearch
 
-
   echo -n "Waiting for Elasticsearch to start..."
   status=1
   until [ $status -eq 0 ]
@@ -68,10 +67,6 @@ install_elasticsearch() {
   echo "Removing default password..."
   sed -i '/ELASTIC_PASSWORD/d' /opt/docker-compose/docker-compose.yml
 
-  echo "Configuring user for Kibana..."
-  read -p "Username: " kibana_user
-  docker exec -it elasticsearch bin/elasticsearch-users useradd $kibana_user -r kibana_admin
-
   popd
 }
 
@@ -86,6 +81,10 @@ install_kibana() {
   pushd /opt/docker-compose
 
   source /opt/elastic/.passwords
+
+  echo "Configuring user for Kibana..."
+  read -p "Username: " kibana_user
+  docker exec -it elasticsearch bin/elasticsearch-users useradd $kibana_user -r kibana_admin
 
   echo "Configuring password for Kibana..."
   sed -i "s/%KIBANA_PASS%/$kibana_system_password/" /opt/elastic/kibana/config/kibana.yml
@@ -114,8 +113,30 @@ install_logstash() {
 
   source /opt/elastic/.passwords
 
+  echo "Creating role for Logstash user..."
+  docker exec elasticsearch curl \
+    --user elastic:$elastic_password \
+    --cacert /usr/share/elasticsearch/config/certificates/ca/ca.crt \
+    -H "Content-Type: application/json" \
+    -XPOST "https://elasticsearch:9200/_xpack/security/role/logstash_writer" \
+    -d'
+    {
+      "cluster": ["manage_index_templates", "monitor", "manage_ilm"],
+      "indices": [
+        {
+          "names": [ "logstash-*" ],
+          "privileges": ["write","create","delete","create_index","manage","manage_ilm"]
+        }
+      ]
+    }'
+
+  echo "Creating logstash_internal user"
+  logstash_internal_password=`< /dev/urandom tr -dc _A-Z-a-z-0-9 | head -c${1:-32};echo`
+  docker exec -it elasticsearch bin/elasticsearch-users useradd logstash_internal -p $logstash_internal_password -r logstash_writer
+  echo "logstash_internal_password=$logstash_internal_password" | tee -a /opt/elastic/.passwords
+
   echo "Configuring password for Logstash..."
-  sed -i "s/%LOGSTASH_PASS%/$logstash_system_password/" /opt/elastic/logstash/pipeline/*.conf
+  sed -i "s/%LOGSTASH_PASS%/$logstash_internal_password/" /opt/elastic/logstash/pipeline/*.conf
 
   echo "Starting Logstash..."
   docker-compose up -d logstash
