@@ -162,9 +162,38 @@ install_apache(){
 }
 
 configure_firewall(){
+  echo -n "Getting Elastic subnet..."
+  DOCKER_SUBNET=`docker network inspect elastic_elknet | grep -oP '"Subnet": "\K\d+\.\d+\.\d+\.\d+\/\d+'`
+  echo $DOCKER_SUBNET
+
+  echo "Configuring UFW-DOCKER rules..."
+  cat <<EOF | tee -a /etc/ufw/after.rules
+
+# BEGIN UFW AND DOCKER
+*filter
+:ufw-user-forward - [0:0]
+:DOCKER-USER - [0:0]
+# Allow everything coming from the Docker Containers
+-A DOCKER-USER -j RETURN -s %DOCKER_SUBNET%
+
+# Custom rules
+-A DOCKER-USER -j ufw-user-forward
+
+# Deny everything going to the Docker Containers
+-A DOCKER-USER -j DROP -p tcp -d %DOCKER_SUBNET%
+-A DOCKER-USER -j DROP -p udp -d %DOCKER_SUBNET%
+
+-A DOCKER-USER -j RETURN
+COMMIT
+# END UFW AND DOCKER
+EOF
+
+  sed -i "s#%DOCKER_SUBNET%#$DOCKER_SUBNET#" /etc/ufw/after.rules
+
   echo "Configuring Firewall policy..."
   ufw default deny incoming
   ufw default allow outgoing
+  ufw default deny routed
 
   echo "Allowing SSH Connections through the firewall..."
   ufw allow ssh
@@ -172,23 +201,26 @@ configure_firewall(){
   read -p "Allow Elasticsearch to be accessed remotely? " -r
   if  [[ $REPLY =~ ^[Yy]$ ]]
   then
-    ufw allow 9200
+    ufw route allow proto tcp from any to $DOCKER_SUBNET port 9200
   fi
 
   read -p "Allow Logstash to be accessed remotely? " -r
   if  [[ $REPLY =~ ^[Yy]$ ]]
   then
-    ufw allow 5044
+    ufw route allow proto tcp from any to $DOCKER_SUBNET port 5044
   fi
 
   read -p "Allow Kibana to be accessed remotely? (Not recommended if you installed Apache) " -r
   if  [[ $REPLY =~ ^[Yy]$ ]]
   then
-    ufw allow 5601
+    ufw route allow proto tcp from any to $DOCKER_SUBNET port 5601
   fi
 
   echo "Enabling firewall..."
   ufw enable
+
+  echo "Restarting UFW..."
+  systemctl restart ufw
 }
 
 install_docker
