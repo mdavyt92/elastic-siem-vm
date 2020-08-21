@@ -55,7 +55,7 @@ install_elasticsearch() {
     docker exec elasticsearch curl https://elasticsearch:9200 -k >/dev/null 2>&1
     status=$?
   done
-  echo
+  echo "done"
 
   echo "Setting passwords for built-in users..."
   docker exec elasticsearch bin/elasticsearch-setup-passwords auto --batch |
