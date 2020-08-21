@@ -5,7 +5,7 @@ echo "##########################################################################
 
 read -p "Are you sure you want to continue? Type 'YES' " -r
 echo
-if [[ $REPLY != "YES"  ]]
+if [[ $REPLY != "YES" ]]
 then
   echo "Exiting..."
   exit
