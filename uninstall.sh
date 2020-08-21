@@ -33,6 +33,11 @@ echo "Deleting all files"
 rm -rf /opt/elastic
 rm -rf /opt/docker-compose
 
+echo "Deleting Apache configuration"
+rm -f /etc/apache2/sites-available/kibana.conf
+rm -f /etc/apache2/sites-enabled/kibana.conf
+rm -rf /etc/apache2/certs
+
 echo "Removing service files"
 rm -f /etc/systemd/system/elasticsearch.service
 rm -f /etc/systemd/system/logstash.service
