@@ -86,9 +86,9 @@ install_kibana() {
 
   wait_elastic
 
-  echo "Configuring user for Kibana..."
+  echo "Configuring new superuser for Kibana..."
   read -p "Username: " kibana_user
-  docker exec -it elasticsearch bin/elasticsearch-users useradd $kibana_user -r kibana_admin
+  docker exec -it elasticsearch bin/elasticsearch-users useradd $kibana_user -r superuser
 
   echo "Configuring password for Kibana..."
   sed -i "s/%KIBANA_PASS%/$kibana_system_password/" /opt/elastic/kibana/config/kibana.yml
