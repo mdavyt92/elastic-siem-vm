@@ -273,16 +273,20 @@ EOF
     ufw route allow proto tcp from any to $DOCKER_SUBNET port 9200
   fi
 
-  read -p "Allow Logstash to be accessed remotely? " -r
-  if  [[ $REPLY =~ ^[Yy]$ ]]
-  then
-    ufw route allow proto tcp from any to $DOCKER_SUBNET port 5044
+  if $LOGSTASH_INSTALLED; then
+    read -p "Allow Logstash to be accessed remotely? " -r
+    if  [[ $REPLY =~ ^[Yy]$ ]]
+    then
+      ufw route allow proto tcp from any to $DOCKER_SUBNET port 5044
+    fi
   fi
 
-  read -p "Allow Kibana to be accessed remotely? (Not recommended if you installed Apache) " -r
-  if  [[ $REPLY =~ ^[Yy]$ ]]
-  then
-    ufw route allow proto tcp from any to $DOCKER_SUBNET port 5601
+  if $KIBANA_INSTALLED; then
+    read -p "Allow Kibana to be accessed remotely? (Not recommended if you installed Apache) " -r
+    if  [[ $REPLY =~ ^[Yy]$ ]]
+    then
+      ufw route allow proto tcp from any to $DOCKER_SUBNET port 5601
+    fi
   fi
 
   echo "Enabling firewall..."
