@@ -2,12 +2,12 @@ version: '3.7'
 
 services:
 
-  elasticsearch:
+  es01:
     build:
       context: elasticsearch/
       args:
         ELASTIC_VERSION: $ELASTIC_VERSION
-    container_name: elasticsearch
+    container_name: es01
     environment:
       ES_JAVA_OPTS: -Xms512m -Xmx512m
       ELASTIC_PASSWORD: changeme
@@ -16,12 +16,54 @@ services:
         soft: -1
         hard: -1
     volumes:
-      - esdata:/usr/share/elasticsearch/data
-      - esconfig:/usr/share/elasticsearch/config
+      - esdata01:/usr/share/elasticsearch/data
+      - esconfig01:/usr/share/elasticsearch/config
       - certs:/usr/share/elasticsearch/config/certificates
-      - /opt/elastic/elasticsearch/config/elasticsearch.yml:/usr/share/elasticsearch/config/elasticsearch.yml
+      - /opt/elastic/elasticsearch/config/elasticsearch.yml:/usr/share/elasticsearch/config/es01.yml
     ports:
       - 9200:9200
+    networks:
+      - elknet
+
+  es02:
+    build:
+      context: elasticsearch/
+      args:
+        ELASTIC_VERSION: $ELASTIC_VERSION
+    container_name: es02
+    environment:
+      ES_JAVA_OPTS: -Xms512m -Xmx512m
+      ELASTIC_PASSWORD: changeme
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+    volumes:
+      - esdata02:/usr/share/elasticsearch/data
+      - esconfig02:/usr/share/elasticsearch/config
+      - certs:/usr/share/elasticsearch/config/certificates
+      - /opt/elastic/elasticsearch/config/elasticsearch.yml:/usr/share/elasticsearch/config/es02.yml
+    networks:
+      - elknet
+
+  es03:
+    build:
+      context: elasticsearch/
+      args:
+        ELASTIC_VERSION: $ELASTIC_VERSION
+    container_name: es03
+    environment:
+      ES_JAVA_OPTS: -Xms512m -Xmx512m
+      ELASTIC_PASSWORD: changeme
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+    volumes:
+      - esdata03:/usr/share/elasticsearch/data
+      - esconfig03:/usr/share/elasticsearch/config
+      - certs:/usr/share/elasticsearch/config/certificates
+      - /opt/elastic/elasticsearch/config/elasticsearch.yml:/usr/share/elasticsearch/config/es03.yml
     networks:
       - elknet
 
@@ -38,8 +80,6 @@ services:
       - /opt/elastic/kibana/config/kibana.yml:/usr/share/kibana/config/kibana.yml
     networks:
       - elknet
-    depends_on:
-      - elasticsearch
 
   logstash:
     build:
@@ -60,9 +100,17 @@ services:
       - elknet
 
 volumes:
-  esdata:
+  esdata01:
     driver: local
-  esconfig:
+  esconfig01:
+    driver: local
+  esdata02:
+    driver: local
+  esconfig02:
+    driver: local
+  esdata03:
+    driver: local
+  esconfig03:
     driver: local
   certs:
     driver: local

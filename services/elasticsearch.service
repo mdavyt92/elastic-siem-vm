@@ -9,15 +9,29 @@ Type=simple
 TimeoutStartSec=15min
 Restart=always
 
-ExecStartPre=/usr/bin/docker-compose pull --quiet --ignore-pull-failures elasticsearch
-ExecStartPre=/usr/bin/docker-compose build --pull elasticsearch
+ExecStartPre=/usr/bin/docker-compose pull --quiet --ignore-pull-failures es01
+ExecStartPre=/usr/bin/docker-compose pull --quiet --ignore-pull-failures es02
+ExecStartPre=/usr/bin/docker-compose pull --quiet --ignore-pull-failures es03
 
-ExecStart=/usr/bin/docker-compose up --remove-orphans elasticsearch
+ExecStartPre=/usr/bin/docker-compose build --pull es01
+ExecStartPre=/usr/bin/docker-compose build --pull es02
+ExecStartPre=/usr/bin/docker-compose build --pull es03
 
-ExecStop=/usr/bin/docker-compose down --remove-orphans elasticsearch
+ExecStart=/usr/bin/docker-compose up --remove-orphans es01
+ExecStart=/usr/bin/docker-compose up --remove-orphans es02
+ExecStart=/usr/bin/docker-compose up --remove-orphans es03
 
-ExecReload=/usr/bin/docker-compose pull --quiet --ignore-pull-failures elasticsearch
-ExecReload=/usr/bin/docker-compose build --pull elasticsearch
+ExecStop=/usr/bin/docker-compose down --remove-orphans es01
+ExecStop=/usr/bin/docker-compose down --remove-orphans es02
+ExecStop=/usr/bin/docker-compose down --remove-orphans es03
+
+ExecReload=/usr/bin/docker-compose pull --quiet --ignore-pull-failures es01
+ExecReload=/usr/bin/docker-compose pull --quiet --ignore-pull-failures es02
+ExecReload=/usr/bin/docker-compose pull --quiet --ignore-pull-failures es03
+
+ExecReload=/usr/bin/docker-compose build --pull es01
+ExecReload=/usr/bin/docker-compose build --pull es02
+ExecReload=/usr/bin/docker-compose build --pull es03
 
 [Install]
 WantedBy=multi-user.target

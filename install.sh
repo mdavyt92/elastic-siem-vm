@@ -18,7 +18,7 @@ wait_elastic() {
   while true
   do
     echo -n "."
-    docker exec elasticsearch curl https://elasticsearch:9200 -k >/dev/null 2>&1
+    docker exec es01 curl https://es01:9200 -k >/dev/null 2>&1
     [ $? -eq 0 ] && echo "done" && return || sleep 5
   done
 }
@@ -54,12 +54,14 @@ install_elasticsearch() {
   docker-compose -f create-certs.yml run --rm create_certs
 
   echo "Starting Elasticsearch..."
-  docker-compose up -d elasticsearch
+  docker-compose up -d es01
+  docker-compose up -d es02
+  docker-compose up -d es03
 
   wait_elastic
 
   echo "Setting passwords for built-in users..."
-  docker exec elasticsearch bin/elasticsearch-setup-passwords auto --batch |
+  docker exec es01 bin/elasticsearch-setup-passwords auto --batch |
     grep PASSWORD |
     sed 's/PASSWORD //' |
     sed 's/ = /_password=/' |
@@ -88,7 +90,7 @@ install_kibana() {
 
   echo "Configuring new superuser for Kibana..."
   read -p "Username: " kibana_user
-  docker exec -it elasticsearch bin/elasticsearch-users useradd $kibana_user -r superuser
+  docker exec -it es01 bin/elasticsearch-users useradd $kibana_user -r superuser
 
   echo "Configuring password for Kibana..."
   sed -i "s/%KIBANA_PASS%/$kibana_system_password/" /opt/elastic/kibana/config/kibana.yml
@@ -120,11 +122,11 @@ install_logstash() {
   wait_elastic
 
   echo "Creating role for Logstash user..."
-  docker exec elasticsearch curl \
+  docker exec es01 curl \
     --user elastic:$elastic_password \
     --cacert /usr/share/elasticsearch/config/certificates/ca/ca.crt \
     -H "Content-Type: application/json" \
-    -XPOST "https://elasticsearch:9200/_xpack/security/role/logstash_writer" \
+    -XPOST "https://es01:9200/_xpack/security/role/logstash_writer" \
     -d'
     {
       "cluster": ["manage_index_templates", "monitor", "manage_ilm"],
@@ -138,7 +140,7 @@ install_logstash() {
 
   echo "Creating logstash_internal user"
   logstash_internal_password=`< /dev/urandom tr -dc _A-Z-a-z-0-9 | head -c${1:-32};echo`
-  docker exec -it elasticsearch bin/elasticsearch-users useradd logstash_internal -p $logstash_internal_password -r logstash_writer
+  docker exec -it es01 bin/elasticsearch-users useradd logstash_internal -p $logstash_internal_password -r logstash_writer
   echo "logstash_internal_password=$logstash_internal_password" | tee -a /opt/elastic/.passwords
 
   echo "Configuring password for Logstash..."
