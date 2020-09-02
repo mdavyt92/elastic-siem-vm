@@ -90,7 +90,24 @@ install_kibana() {
 
   echo "Configuring new superuser for Kibana..."
   read -p "Username: " kibana_user
-  docker exec -it es01 bin/elasticsearch-users useradd $kibana_user -r superuser
+  while true; do
+    read -s -p "Password: " kibana_password
+    echo
+    read -s -p "Password (again): " kibana_password2
+    echo
+    [ "$kibana_password" = "$kibana_password2" ] && break
+    echo "Please try again"
+  done
+  docker exec es01 curl \
+    --user elastic:$elastic_password \
+    --cacert /usr/share/elasticsearch/config/certificates/ca/ca.crt \
+    -H "Content-Type: application/json" \
+    -XPOST "https://es01:9200/_security/user/$kibana_user" \
+    -d "
+    {
+      \"password\": \"$kibana_password\",
+      \"roles\": [ \"superuser\" ]
+    }"
 
   echo "Configuring password for Kibana..."
   sed -i "s/%KIBANA_PASS%/$kibana_system_password/" /opt/elastic/kibana/config/kibana.yml
@@ -140,7 +157,17 @@ install_logstash() {
 
   echo "Creating logstash_internal user"
   logstash_internal_password=`< /dev/urandom tr -dc _A-Z-a-z-0-9 | head -c${1:-32};echo`
-  docker exec -it es01 bin/elasticsearch-users useradd logstash_internal -p $logstash_internal_password -r logstash_writer
+  docker exec es01 curl \
+    --user elastic:$elastic_password \
+    --cacert /usr/share/elasticsearch/config/certificates/ca/ca.crt \
+    -H "Content-Type: application/json" \
+    -XPOST "https://es01:9200/_security/user/logstash_internal" \
+    -d "
+    {
+      \"password\": \"$logstash_internal_password\",
+      \"roles\": [ \"logstash_writer\" ]
+    }"
+
   echo "logstash_internal_password=$logstash_internal_password" | tee -a /opt/elastic/.passwords
 
   echo "Configuring password for Logstash..."
