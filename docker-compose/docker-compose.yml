@@ -19,7 +19,7 @@ services:
       - esdata01:/usr/share/elasticsearch/data
       - esconfig01:/usr/share/elasticsearch/config
       - certs:/usr/share/elasticsearch/config/certificates
-      - /opt/elastic/elasticsearch/config/elasticsearch.yml:/usr/share/elasticsearch/config/es01.yml
+      - /opt/elastic/elasticsearch/config/es01.yml:/usr/share/elasticsearch/config/elasticsearch.yml
     ports:
       - 9200:9200
     networks:
@@ -42,7 +42,7 @@ services:
       - esdata02:/usr/share/elasticsearch/data
       - esconfig02:/usr/share/elasticsearch/config
       - certs:/usr/share/elasticsearch/config/certificates
-      - /opt/elastic/elasticsearch/config/elasticsearch.yml:/usr/share/elasticsearch/config/es02.yml
+      - /opt/elastic/elasticsearch/config/es02.yml:/usr/share/elasticsearch/config/elasticsearch.yml
     networks:
       - elknet
 
@@ -63,7 +63,7 @@ services:
       - esdata03:/usr/share/elasticsearch/data
       - esconfig03:/usr/share/elasticsearch/config
       - certs:/usr/share/elasticsearch/config/certificates
-      - /opt/elastic/elasticsearch/config/elasticsearch.yml:/usr/share/elasticsearch/config/es03.yml
+      - /opt/elastic/elasticsearch/config/es03.yml:/usr/share/elasticsearch/config/elasticsearch.yml
     networks:
       - elknet
 
