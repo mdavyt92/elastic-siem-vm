@@ -74,6 +74,93 @@ install_elasticsearch() {
   popd
 }
 
+create_roles_users_beats(){
+  echo "Creating roles and users for each beats type..."
+  source /opt/elastic/.passwords
+
+  wait_elastic
+
+  beats=(
+    filebeat
+    metricbeat
+    packetbeat
+    winlogbeat
+    auditbeat
+    heartbeat
+    functionbeat
+  )
+
+  for beat in ${beats[@]}; do
+
+    echo "Creating ${beat}_writer role..."
+    docker exec es01 curl \
+      --silent \
+      --user elastic:$elastic_password \
+      --cacert /usr/share/elasticsearch/config/certificates/ca/ca.crt \
+      -H "Content-Type: application/json" \
+      -XPOST "https://es01:9200/_xpack/security/role/${beat}_writer" \
+      -d"
+      {
+        \"cluster\": [ \"monitor\", \"read_ilm\" ],
+        \"indices\": [
+          {
+            \"names\": [ \"${beat}-*\" ],
+            \"privileges\": [ \"create_doc\", \"view_index_metadata\", \"create_index\" ]
+          }
+        ]
+      }"
+
+    echo "Creating ${beat}_user user..."
+    beatpass=`< /dev/urandom tr -dc _A-Z-a-z-0-9 | head -c${1:-32};echo`
+    docker exec es01 curl \
+      --silent \
+      --user elastic:$elastic_password \
+      --cacert /usr/share/elasticsearch/config/certificates/ca/ca.crt \
+      -H "Content-Type: application/json" \
+      -XPOST "https://es01:9200/_security/user/${beat}_user" \
+      -d "
+      {
+        \"password\": \"$beatpass\",
+        \"roles\": [ \"${beat}_writer\" ]
+      }"
+    echo; echo "${beat}_user_password=$beatpass" | tee -a /opt/elastic/.passwords
+
+    echo "Creating ${beat}_setup role..."
+    docker exec es01 curl \
+      --silent \
+      --user elastic:$elastic_password \
+      --cacert /usr/share/elasticsearch/config/certificates/ca/ca.crt \
+      -H "Content-Type: application/json" \
+      -XPOST "https://es01:9200/_xpack/security/role/${beat}_setup" \
+      -d"
+      {
+        \"cluster\": [\"monitor\", \"manage_ilm\"],
+        \"indices\": [
+          {
+            \"names\": [ \"${beat}-*\" ],
+            \"privileges\": [\"manage\"]
+          }
+        ]
+      }"
+
+    echo "Creating ${beat}_setup_user user..."
+    beatpass=`< /dev/urandom tr -dc _A-Z-a-z-0-9 | head -c${1:-32};echo`
+    docker exec es01 curl \
+      --silent \
+      --user elastic:$elastic_password \
+      --cacert /usr/share/elasticsearch/config/certificates/ca/ca.crt \
+      -H "Content-Type: application/json" \
+      -XPOST "https://es01:9200/_security/user/${beat}_setup_user" \
+      -d "
+      {
+        \"password\": \"$beatpass\",
+        \"roles\": [ \"${beat}_setup\", \"kibana_admin\", \"ingest_admin\" ]
+      }"
+    echo; echo "${beat}_setup_user_password=$beatpass" | tee -a /opt/elastic/.passwords
+
+  done
+}
+
 install_kibana() {
   read -p "Do you want to install Kibana? " -r
   echo
@@ -334,6 +421,9 @@ copy_files
 install_elasticsearch
 install_kibana
 install_logstash
+
+# Beats users and roles
+create_roles_users_beats
 
 # Services for starting/stopping the stack
 install_services
