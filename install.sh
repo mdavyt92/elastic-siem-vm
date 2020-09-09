@@ -5,6 +5,8 @@ if [[ $EUID -ne 0 ]]; then
    exit 1
 fi
 
+alias es-post='source /opt/elastic/.passwords; docker exec es01 curl --silent --user elastic:$elastic_password --cacert /usr/share/elasticsearch/config/certificates/ca/ca.crt -H "Content-Type: application/json" -XPOST'
+
 install_docker() {
   echo "Updating package list..."
   apt -y update
@@ -54,9 +56,7 @@ install_elasticsearch() {
   docker-compose -f create-certs.yml run --rm create_certs
 
   echo "Starting Elasticsearch..."
-  docker-compose up -d es01
-  docker-compose up -d es02
-  docker-compose up -d es03
+  docker-compose -f elasticsearch.yml up
 
   wait_elastic
 
@@ -93,13 +93,7 @@ create_roles_users_beats(){
   for beat in ${beats[@]}; do
 
     echo "Creating ${beat}_writer role..."
-    docker exec es01 curl \
-      --silent \
-      --user elastic:$elastic_password \
-      --cacert /usr/share/elasticsearch/config/certificates/ca/ca.crt \
-      -H "Content-Type: application/json" \
-      -XPOST "https://es01:9200/_xpack/security/role/${beat}_writer" \
-      -d"
+    es-post "https://es01:9200/_xpack/security/role/${beat}_writer" -d"
       {
         \"cluster\": [ \"monitor\", \"read_ilm\" ],
         \"indices\": [
@@ -112,13 +106,7 @@ create_roles_users_beats(){
 
     echo "Creating ${beat}_user user..."
     beatpass=`< /dev/urandom tr -dc _A-Z-a-z-0-9 | head -c${1:-32};echo`
-    docker exec es01 curl \
-      --silent \
-      --user elastic:$elastic_password \
-      --cacert /usr/share/elasticsearch/config/certificates/ca/ca.crt \
-      -H "Content-Type: application/json" \
-      -XPOST "https://es01:9200/_security/user/${beat}_user" \
-      -d "
+    es-post "https://es01:9200/_security/user/${beat}_user" -d "
       {
         \"password\": \"$beatpass\",
         \"roles\": [ \"${beat}_writer\" ]
@@ -126,13 +114,7 @@ create_roles_users_beats(){
     echo; echo "${beat}_user_password=$beatpass" | tee -a /opt/elastic/.passwords
 
     echo "Creating ${beat}_setup role..."
-    docker exec es01 curl \
-      --silent \
-      --user elastic:$elastic_password \
-      --cacert /usr/share/elasticsearch/config/certificates/ca/ca.crt \
-      -H "Content-Type: application/json" \
-      -XPOST "https://es01:9200/_xpack/security/role/${beat}_setup" \
-      -d"
+    es-post "https://es01:9200/_xpack/security/role/${beat}_setup" -d"
       {
         \"cluster\": [\"monitor\", \"manage_ilm\"],
         \"indices\": [
@@ -145,13 +127,7 @@ create_roles_users_beats(){
 
     echo "Creating ${beat}_setup_user user..."
     beatpass=`< /dev/urandom tr -dc _A-Z-a-z-0-9 | head -c${1:-32};echo`
-    docker exec es01 curl \
-      --silent \
-      --user elastic:$elastic_password \
-      --cacert /usr/share/elasticsearch/config/certificates/ca/ca.crt \
-      -H "Content-Type: application/json" \
-      -XPOST "https://es01:9200/_security/user/${beat}_setup_user" \
-      -d "
+    es-post "https://es01:9200/_security/user/${beat}_setup_user" -d "
       {
         \"password\": \"$beatpass\",
         \"roles\": [ \"${beat}_setup\", \"kibana_admin\", \"ingest_admin\" ]
@@ -185,12 +161,7 @@ install_kibana() {
     [ "$kibana_password" = "$kibana_password2" ] && break
     echo "Please try again"
   done
-  docker exec es01 curl \
-    --user elastic:$elastic_password \
-    --cacert /usr/share/elasticsearch/config/certificates/ca/ca.crt \
-    -H "Content-Type: application/json" \
-    -XPOST "https://es01:9200/_security/user/$kibana_user" \
-    -d "
+  es-post "https://es01:9200/_security/user/$kibana_user" -d "
     {
       \"password\": \"$kibana_password\",
       \"roles\": [ \"superuser\" ]
@@ -204,7 +175,7 @@ install_kibana() {
   sed -i "s/%KIBANA_ENCRYPTION_KEY%/$KIBANA_ENCRYPTION_KEY/" /opt/elastic/kibana/config/kibana.yml
 
   echo "Starting Kibana..."
-  docker-compose up -d kibana
+  docker-compose -f kibana.yml up
 
   popd
 
@@ -226,12 +197,7 @@ install_logstash() {
   wait_elastic
 
   echo "Creating role for Logstash user..."
-  docker exec es01 curl \
-    --user elastic:$elastic_password \
-    --cacert /usr/share/elasticsearch/config/certificates/ca/ca.crt \
-    -H "Content-Type: application/json" \
-    -XPOST "https://es01:9200/_xpack/security/role/logstash_writer" \
-    -d'
+  es-post "https://es01:9200/_xpack/security/role/logstash_writer" -d'
     {
       "cluster": ["manage_index_templates", "monitor", "manage_ilm"],
       "indices": [
@@ -244,12 +210,7 @@ install_logstash() {
 
   echo "Creating logstash_internal user"
   logstash_internal_password=`< /dev/urandom tr -dc _A-Z-a-z-0-9 | head -c${1:-32};echo`
-  docker exec es01 curl \
-    --user elastic:$elastic_password \
-    --cacert /usr/share/elasticsearch/config/certificates/ca/ca.crt \
-    -H "Content-Type: application/json" \
-    -XPOST "https://es01:9200/_security/user/logstash_internal" \
-    -d "
+  es-post "https://es01:9200/_security/user/logstash_internal" -d "
     {
       \"password\": \"$logstash_internal_password\",
       \"roles\": [ \"logstash_writer\" ]
@@ -261,11 +222,58 @@ install_logstash() {
   sed -i "s/%LOGSTASH_PASS%/$logstash_internal_password/" /opt/elastic/logstash/pipeline/*.conf
 
   echo "Starting Logstash..."
-  docker-compose up -d logstash
+  docker-compose -f logstash.yml up
 
   popd
 
   LOGSTASH_INSTALLED=true
+}
+
+install_elastalert() {
+  read -p "Do you want to install Elastalert? " -r
+  echo
+  if [[ ! $REPLY =~ ^[Yy]$ ]]
+  then
+    return
+  fi
+
+  echo "Creating elastalert role..."
+  es-post "https://es01:9200/_xpack/security/role/elastalert" -d"
+        {
+          \"cluster\": [ \"monitor\" ],
+          \"indices\": [
+            {
+              \"names\": [ \"elastalert_*\" ],
+              \"privileges\": [ \"all\" ]
+            },
+        {
+        \"names\": [ \"*beats*\" ],
+        \"privileges\": [ \"read\" ]
+        },
+        {
+        \"names\": [ \"logstash-*\" ],
+        \"privileges\": [ \"read\" ]
+        }
+          ]
+        }"
+
+  echo "Creating elastalert user..."
+  elastalert_pass=`< /dev/urandom tr -dc _A-Z-a-z-0-9 | head -c${1:-32};echo`
+  es-post "https://es01:9200/_security/user/elastalert" -d "
+        {
+          \"password\": \"$elastalert_pass\",
+          \"roles\": [ \"elastalert\" ]
+        }"
+
+  echo; echo "elastalert_password=$elastalert_pass" | tee -a /opt/elastic/.passwords
+
+  sed -i "s/%ELASTALERT_PASSWORD%/$elastalert_pass/" /opt/elastic/elastalert/elastalert.yaml
+
+  pushd /opt/docker-compose
+  docker-compose -f elastalert.yml up
+  popd
+
+  ELASTALERT_INSTALLED=true
 }
 
 install_services() {
@@ -286,13 +294,17 @@ install_services() {
 
   echo "Stopping containers..."
   pushd /opt/docker-compose
-  docker-compose down
+  $LOGSTASH_INSTALLED && docker-compose -f logstash.yml down
+  $ELASTALERT_INSTALLED && docker-compose -f elastalert.yml down
+  $KIBANA_INSTALLED && docker-compose -f kibana.yml down
+  docker-compose -f elasticsearch.yml down
   popd
 
   echo "Starting and enabling services..."
   systemctl enable elasticsearch && systemctl start elasticsearch
   $KIBANA_INSTALLED && systemctl enable kibana && systemctl start kibana
   $LOGSTASH_INSTALLED && systemctl enable logstash && systemctl start logstash
+  $ELASTALERT_INSTALLED && systemctl enable elastalert && systemctl start elastalert
 }
 
 install_apache(){
@@ -421,6 +433,7 @@ copy_files
 install_elasticsearch
 install_kibana
 install_logstash
+install_elastalert
 
 # Beats users and roles
 create_roles_users_beats

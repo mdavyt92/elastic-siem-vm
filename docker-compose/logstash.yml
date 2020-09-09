@@ -1,0 +1,29 @@
+version: '3.7'
+
+services:
+
+  logstash:
+    build:
+      context: logstash/
+      args:
+        ELASTIC_VERSION: $ELASTIC_VERSION
+    container_name: logstash
+    ports:
+      - 9600:9600
+      - 5044:5044
+    volumes:
+      - certs:/usr/share/elasticsearch/config/certificates
+      - /opt/elastic/logstash/config/logstash.yml:/usr/share/logstash/config/logstash.yml
+      - /opt/elastic/logstash/pipeline:/usr/share/logstash/pipeline
+    environment:
+      LS_JAVA_OPTS: "-Xmx256m -Xms256m"
+    networks:
+      - elknet
+
+volumes:
+  certs:
+    driver: local
+
+networks:
+  elknet:
+    driver: bridge

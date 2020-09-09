@@ -9,15 +9,15 @@ Type=simple
 TimeoutStartSec=15min
 Restart=always
 
-ExecStartPre=/usr/bin/docker-compose pull --quiet --ignore-pull-failures logstash
-ExecStartPre=/usr/bin/docker-compose build --pull logstash
+ExecStartPre=/usr/bin/docker-compose -f logstash.yml pull --quiet --ignore-pull-failures
+ExecStartPre=/usr/bin/docker-compose -f logstash.yml build --pull
 
-ExecStart=/usr/bin/docker-compose up --remove-orphans logstash
+ExecStart=/usr/bin/docker-compose -f logstash.yml up --remove-orphans
 
-ExecStop=/usr/bin/docker-compose down --remove-orphans logstash
+ExecStop=/usr/bin/docker-compose -f logstash.yml down --remove-orphans
 
-ExecReload=/usr/bin/docker-compose pull --quiet --ignore-pull-failures logstash
-ExecReload=/usr/bin/docker-compose build --pull logstash
+ExecReload=/usr/bin/docker-compose -f logstash.yml pull --quiet --ignore-pull-failures
+ExecReload=/usr/bin/docker-compose -f logstash.yml build --pull
 
 [Install]
 WantedBy=multi-user.target

@@ -1,0 +1,23 @@
+[Unit]
+Description=elastalert
+Requires=docker.service network-online.target
+After=docker.service network-online.target
+
+[Service]
+WorkingDirectory=/opt/docker-compose
+Type=simple
+TimeoutStartSec=15min
+Restart=always
+
+ExecStartPre=/usr/bin/docker-compose -f elastalert.yml pull --quiet --ignore-pull-failures
+ExecStartPre=/usr/bin/docker-compose -f elastalert.yml build --pull
+
+ExecStart=/usr/bin/docker-compose -f elastalert.yml up --remove-orphans
+
+ExecStop=/usr/bin/docker-compose -f elastalert.yml down --remove-orphans
+
+ExecReload=/usr/bin/docker-compose -f elastalert.yml pull --quiet --ignore-pull-failures
+ExecReload=/usr/bin/docker-compose -f elastalert.yml build --pull
+
+[Install]
+WantedBy=multi-user.target

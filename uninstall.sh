@@ -42,3 +42,4 @@ echo "Removing service files"
 rm -f /etc/systemd/system/elasticsearch.service
 rm -f /etc/systemd/system/logstash.service
 rm -f /etc/systemd/system/kibana.service
+rm -f /etc/systemd/system/elastalert.service
