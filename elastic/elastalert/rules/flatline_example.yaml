@@ -1,0 +1,15 @@
+name: Auditbeat flatline
+type: flatline
+
+threshold: 1
+timeframe:
+  minutes: 10
+
+index: auditbeat-*
+
+realert:
+  minutes: 60
+
+alert:
+  - debug
+alert_text: No events on auditbeat index
