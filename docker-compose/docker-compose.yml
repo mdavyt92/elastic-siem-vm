@@ -67,6 +67,52 @@ services:
     networks:
       - elknet
 
+  elasticsearch:
+    image: tianon/true
+    restart: "no"
+    depends_on: [ "es01", "es02", "es03" ]
+
+  kibana:
+    build:
+      context: kibana/
+      args:
+        ELASTIC_VERSION: $ELASTIC_VERSION
+    container_name: kibana
+    ports:
+      - 5601:5601
+    volumes:
+      - certs:/usr/share/elasticsearch/config/certificates
+      - /opt/elastic/kibana/config/kibana.yml:/usr/share/kibana/config/kibana.yml
+    networks:
+      - elknet
+
+  logstash:
+    build:
+      context: logstash/
+      args:
+        ELASTIC_VERSION: $ELASTIC_VERSION
+    container_name: logstash
+    ports:
+      - 9600:9600
+      - 5044:5044
+    volumes:
+      - certs:/usr/share/elasticsearch/config/certificates
+      - /opt/elastic/logstash/config/logstash.yml:/usr/share/logstash/config/logstash.yml
+      - /opt/elastic/logstash/pipeline:/usr/share/logstash/pipeline
+    environment:
+      LS_JAVA_OPTS: "-Xmx256m -Xms256m"
+    networks:
+      - elknet
+
+  elastalert:
+    image: jertel/elastalert-docker
+    volumes:
+      - certs:/usr/share/elasticsearch/config/certificates
+      - /opt/elastic/elastalert/elastalert.yaml:/opt/config/elastalert_config.yaml
+      - /opt/elastic/elastalert/rules:/opt/rules
+    networks:
+      - elknet
+
 volumes:
   esdata01:
     driver: local

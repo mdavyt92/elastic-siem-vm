@@ -56,7 +56,7 @@ install_elasticsearch() {
   docker-compose -f create-certs.yml run --rm create_certs
 
   echo "Starting Elasticsearch..."
-  docker-compose -f elasticsearch.yml up
+  docker-compose up -d elasticsearch
 
   wait_elastic
 
@@ -175,7 +175,7 @@ install_kibana() {
   sed -i "s/%KIBANA_ENCRYPTION_KEY%/$KIBANA_ENCRYPTION_KEY/" /opt/elastic/kibana/config/kibana.yml
 
   echo "Starting Kibana..."
-  docker-compose -f kibana.yml up
+  docker-compose up -d kibana
 
   popd
 
@@ -222,7 +222,7 @@ install_logstash() {
   sed -i "s/%LOGSTASH_PASS%/$logstash_internal_password/" /opt/elastic/logstash/pipeline/*.conf
 
   echo "Starting Logstash..."
-  docker-compose -f logstash.yml up
+  docker-compose up -d logstash
 
   popd
 
@@ -270,7 +270,7 @@ install_elastalert() {
   sed -i "s/%ELASTALERT_PASSWORD%/$elastalert_pass/" /opt/elastic/elastalert/elastalert.yaml
 
   pushd /opt/docker-compose
-  docker-compose -f elastalert.yml up
+  docker-compose up -d elastalert
   popd
 
   ELASTALERT_INSTALLED=true
@@ -294,10 +294,7 @@ install_services() {
 
   echo "Stopping containers..."
   pushd /opt/docker-compose
-  $LOGSTASH_INSTALLED && docker-compose -f logstash.yml down
-  $ELASTALERT_INSTALLED && docker-compose -f elastalert.yml down
-  $KIBANA_INSTALLED && docker-compose -f kibana.yml down
-  docker-compose -f elasticsearch.yml down
+  docker-compose down
   popd
 
   echo "Starting and enabling services..."

@@ -9,15 +9,15 @@ Type=simple
 TimeoutStartSec=15min
 Restart=always
 
-ExecStartPre=/usr/bin/docker-compose -f elasticsearch.yml pull --quiet --ignore-pull-failures
-ExecStartPre=/usr/bin/docker-compose -f elasticsearch.yml build --pull
+ExecStartPre=/usr/bin/docker-compose pull --quiet --ignore-pull-failures elasticsearch
+ExecStartPre=/usr/bin/docker-compose build --pull elasticsearch
 
-ExecStart=/usr/bin/docker-compose -f elasticsearch.yml up --remove-orphans
+ExecStart=/usr/bin/docker-compose up --remove-orphans elasticsearch
 
-ExecStop=/usr/bin/docker-compose -f elasticsearch.yml down --remove-orphans
+ExecStop=/usr/bin/docker-compose down --remove-orphans elasticsearch
 
-ExecReload=/usr/bin/docker-compose -f elasticsearch.yml pull --quiet --ignore-pull-failures
-ExecReload=/usr/bin/docker-compose -f elasticsearch.yml build --pull
+ExecReload=/usr/bin/docker-compose pull --quiet --ignore-pull-failures elasticsearch
+ExecReload=/usr/bin/docker-compose build --pull elasticsearch
 
 [Install]
 WantedBy=multi-user.target
