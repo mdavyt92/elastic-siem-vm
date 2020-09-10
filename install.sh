@@ -280,6 +280,52 @@ install_elastalert() {
   ELASTALERT_INSTALLED=true
 }
 
+install_wazuh() {
+  read -p "Do you want to install Wazuh? " -r
+  echo
+  if [[ ! $REPLY =~ ^[Yy]$ ]]
+  then
+    return
+  fi
+
+  echo "Downloading Wazuh module for Filebeat..."
+  mkdir /opt/elastic/filebeat-wazuh/module
+  WAZUH_FILEBEAT_MODULE="wazuh-filebeat-0.1.tar.gz"
+  curl "https://packages.wazuh.com/3.x/filebeat/${WAZUH_FILEBEAT_MODULE}" | tar -xvz -C /opt/elastic/filebeat-wazuh/module/
+
+  echo "Configuring Wazuh role..."
+  es-post "https://es01:9200/_xpack/security/role/wazuh" -d'
+    {
+      "cluster": ["manage_index_templates", "monitor", "manage_ilm"],
+      "indices": [
+        {
+          "names": [ "wazuh-*" ],
+          "privileges": ["write","create","delete","create_index","manage","manage_ilm"]
+        }
+      ]
+    }'
+
+  echo "Configuring Wazuh user..."
+  wazuh_password=`< /dev/urandom tr -dc _A-Z-a-z-0-9 | head -c${1:-32};echo`
+
+  es-post "https://es01:9200/_security/user/wazuh" -d "
+    {
+      \"password\": \"$wazuh_password\",
+      \"roles\": [ \"wazuh\" ]
+    }"
+
+  echo "Saving password..."
+  echo "wazuh_password=$wazuh_password" | tee -a /opt/elastic/.passwords
+  sed -i "s/%WAZUH_PASSWORD%/$wazuh_password/" /opt/elastic/filebeat-wazuh/filebeat.yml
+
+  pushd /opt/docker-compose
+  docker-compose up -d wazuh
+  popd
+
+  WAZUH_INSTALLED=true
+
+}
+
 install_services() {
   read -p "Do you want to install services for elasticsearch, logstash and kibana? " -r
   echo
@@ -292,6 +338,8 @@ install_services() {
   cp services/elasticsearch.service /etc/systemd/system/
   $KIBANA_INSTALLED && cp services/kibana.service /etc/systemd/system/
   $LOGSTASH_INSTALLED && cp services/logstash.service /etc/systemd/system/
+  $ELASTALERT_INSTALLED && cp services/elastalert.service /etc/systemd/system/
+  $WAZUH_INSTALLED && cp services/wazuh.service /etc/systemd/system/
 
   echo "Reloading systemctl daemon..."
   systemctl daemon-reload
@@ -306,6 +354,7 @@ install_services() {
   $KIBANA_INSTALLED && systemctl enable kibana && systemctl start kibana
   $LOGSTASH_INSTALLED && systemctl enable logstash && systemctl start logstash
   $ELASTALERT_INSTALLED && systemctl enable elastalert && systemctl start elastalert
+  $WAZUH_INSTALLED && systemctl enable wazuh && systemctl start wazuh
 }
 
 install_apache(){
@@ -419,6 +468,14 @@ EOF
     fi
   fi
 
+  if $WAZUH_INSTALLED; then
+    read -p "Open Wazuh port (1514)? " -r
+    if  [[ $REPLY =~ ^[Yy]$ ]]
+    then
+      ufw route allow proto tcp from any to $DOCKER_SUBNET port 1514
+    fi
+  fi
+
   echo "Enabling firewall..."
   ufw enable
 
@@ -434,7 +491,10 @@ copy_files
 install_elasticsearch
 install_kibana
 install_logstash
+
+# Other tools
 install_elastalert
+install_wazuh
 
 # Beats users and roles
 create_roles_users_beats

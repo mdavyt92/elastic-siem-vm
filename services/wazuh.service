@@ -1,0 +1,23 @@
+[Unit]
+Description=wazuh
+Requires=docker.service network-online.target
+After=docker.service network-online.target
+
+[Service]
+WorkingDirectory=/opt/docker-compose
+Type=simple
+TimeoutStartSec=15min
+Restart=always
+
+ExecStartPre=/usr/bin/docker-compose pull --quiet --ignore-pull-failures wazuh
+ExecStartPre=/usr/bin/docker-compose build --pull wazuh
+
+ExecStart=/usr/bin/docker-compose up --remove-orphans wazuh
+
+ExecStop=/usr/bin/docker-compose down --remove-orphans wazuh
+
+ExecReload=/usr/bin/docker-compose pull --quiet --ignore-pull-failures wazuh
+ExecReload=/usr/bin/docker-compose build --pull wazuh
+
+[Install]
+WantedBy=multi-user.target
