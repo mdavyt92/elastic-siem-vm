@@ -204,6 +204,10 @@ install_logstash() {
         {
           "names": [ "logstash-*" ],
           "privileges": ["write","create","delete","create_index","manage","manage_ilm"]
+        },
+        {
+          "names": [ "*beat-*" ],
+          "privileges": ["write","create","delete","create_index","manage","manage_ilm"]
         }
       ]
     }'
