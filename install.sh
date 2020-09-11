@@ -296,11 +296,11 @@ install_wazuh() {
   echo "Configuring Wazuh role..."
   es-post "https://es01:9200/_xpack/security/role/wazuh" -d'
     {
-      "cluster": ["manage_index_templates", "monitor", "manage_ilm"],
+      "cluster": ["manage_index_templates", "manage_pipeline", "monitor"],
       "indices": [
         {
           "names": [ "wazuh-*" ],
-          "privileges": ["write","create","delete","create_index","manage","manage_ilm"]
+          "privileges": ["all"]
         }
       ]
     }'
@@ -318,6 +318,17 @@ install_wazuh() {
   echo "wazuh_password=$wazuh_password" | tee -a /opt/elastic/.passwords
   sed -i "s/%WAZUH_PASSWORD%/$wazuh_password/" /opt/elastic/filebeat-wazuh/filebeat.yml
 
+  echo "Downloading Wazuh Kibana app..."
+  curl https://packages.wazuh.com/wazuhapp/wazuhapp-3.13.1_7.9.0.zip -o /tmp/wazuh-app.zip
+  docker cp /tmp/wazuh-app.zip kibana:/wazuh-app.zip
+
+  echo "Installing Wazuh Kibana app..."
+  docker exec kibana bin/kibana-plugin install file:///wazuh-app.zip
+
+  echo "Configuring Wazuh Kibana app..."
+  docker exec kibana sed -i 's/localhost/wazuh/' /usr/share/kibana/optimize/wazuh/config/wazuh.yml
+
+  echo "Starting Wazuh..."
   pushd /opt/docker-compose
   docker-compose up -d wazuh
   popd
@@ -472,7 +483,7 @@ EOF
     read -p "Open Wazuh port (1514)? " -r
     if  [[ $REPLY =~ ^[Yy]$ ]]
     then
-      ufw route allow proto tcp from any to $DOCKER_SUBNET port 1514
+      ufw route allow proto udp from any to $DOCKER_SUBNET port 1514
     fi
   fi
 
