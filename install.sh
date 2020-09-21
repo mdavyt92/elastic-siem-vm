@@ -5,7 +5,8 @@ if [[ $EUID -ne 0 ]]; then
    exit 1
 fi
 
-alias es-post='source /opt/elastic/.passwords; docker exec es01 curl --silent --user elastic:$elastic_password --cacert /usr/share/elasticsearch/config/certificates/ca/ca.crt -H "Content-Type: application/json" -XPOST'
+alias escurl='source /opt/elastic/.passwords; docker exec es01 curl --silent --user elastic:$elastic_password --cacert /usr/share/elasticsearch/config/certificates/ca/ca.crt'
+alias es-post='escurl -H "Content-Type: application/json" -XPOST'
 
 install_docker() {
   echo "Updating package list..."
@@ -72,9 +73,53 @@ install_elasticsearch() {
   sed -i '/ELASTIC_PASSWORD/d' /opt/docker-compose/docker-compose.yml
 
   popd
+
+  echo "Configuring geoip-info ingest pipeline..."
+  escurl -X PUT "https://es01:9200/_ingest/pipeline/geoip-info?pretty" -H 'Content-Type: application/json' -d'
+  {
+    "description": "Add geoip info",
+    "processors": [
+      {
+        "geoip": {
+          "field": "client.ip",
+          "target_field": "client.geo",
+          "ignore_missing": true
+        }
+      },
+      {
+        "geoip": {
+          "field": "source.ip",
+          "target_field": "source.geo",
+          "ignore_missing": true
+        }
+      },
+      {
+        "geoip": {
+          "field": "destination.ip",
+          "target_field": "destination.geo",
+          "ignore_missing": true
+        }
+      },
+      {
+        "geoip": {
+          "field": "server.ip",
+          "target_field": "server.geo",
+          "ignore_missing": true
+        }
+      },
+      {
+        "geoip": {
+          "field": "host.ip",
+          "target_field": "host.geo",
+          "ignore_missing": true
+        }
+      }
+    ]
+  }
+  '
 }
 
-create_roles_users_beats(){
+create_roles_users_beats() {
   echo "Creating roles and users for each beats type..."
   source /opt/elastic/.passwords
 
