@@ -50,6 +50,25 @@ copy_files() {
   cp -r docker-compose /opt/docker-compose
 }
 
+config_heap() {
+  echo "Configuring memory heap sizes..."
+  mb_mem=`free -m | grep -oP '\d+' | head -n 1`
+
+  echo "Setting Eleasticsearch heap to 50% of total memory (max. 25GB)..."
+  es_heap=$(( $mb_mem / 2 > 25600 ? 25600 : $mb_mem / 2 ))
+
+  echo "Setting Logstash heap to 25% of total memory (max. 4GB)..."
+  ls_heap=$(( $mb_mem / 4 > 4096 ? 4096 : $mb_mem / 4 ))
+
+  echo "--- Heap configuration ---"
+  echo "Total memory: $mb_mem MB"
+  echo "Elasticsearch heap size: $es_heap MB"
+  echo "Logstash heap size: $ls_heap MB"
+
+  sed -i "s/%ES_HEAP_SIZE%/$es_heap/g" /opt/docker-compose/docker-compose.yml
+  sed -i "s/%LS_HEAP_SIZE%/$ls_heap/g" /opt/docker-compose/docker-compose.yml
+}
+
 install_elasticsearch() {
   pushd /opt/docker-compose
 
@@ -544,6 +563,7 @@ install_docker
 copy_files
 
 # ELK Stack
+config_heap
 install_elasticsearch
 install_kibana
 install_logstash

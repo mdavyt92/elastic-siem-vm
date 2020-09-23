@@ -9,7 +9,7 @@ services:
         ELASTIC_VERSION: $ELASTIC_VERSION
     container_name: es01
     environment:
-      ES_JAVA_OPTS: -Xms512m -Xmx512m
+      ES_JAVA_OPTS: "-Xms%ES_HEAP_SIZE%m -Xmx%ES_HEAP_SIZE%m"
       ELASTIC_PASSWORD: changeme
     ulimits:
       memlock:
@@ -25,52 +25,10 @@ services:
     networks:
       - elknet
 
-  es02:
-    build:
-      context: elasticsearch/
-      args:
-        ELASTIC_VERSION: $ELASTIC_VERSION
-    container_name: es02
-    environment:
-      ES_JAVA_OPTS: -Xms512m -Xmx512m
-      ELASTIC_PASSWORD: changeme
-    ulimits:
-      memlock:
-        soft: -1
-        hard: -1
-    volumes:
-      - esdata02:/usr/share/elasticsearch/data
-      - esconfig02:/usr/share/elasticsearch/config
-      - certs:/usr/share/elasticsearch/config/certificates
-      - /opt/elastic/elasticsearch/config/es02.yml:/usr/share/elasticsearch/config/elasticsearch.yml
-    networks:
-      - elknet
-
-  es03:
-    build:
-      context: elasticsearch/
-      args:
-        ELASTIC_VERSION: $ELASTIC_VERSION
-    container_name: es03
-    environment:
-      ES_JAVA_OPTS: -Xms512m -Xmx512m
-      ELASTIC_PASSWORD: changeme
-    ulimits:
-      memlock:
-        soft: -1
-        hard: -1
-    volumes:
-      - esdata03:/usr/share/elasticsearch/data
-      - esconfig03:/usr/share/elasticsearch/config
-      - certs:/usr/share/elasticsearch/config/certificates
-      - /opt/elastic/elasticsearch/config/es03.yml:/usr/share/elasticsearch/config/elasticsearch.yml
-    networks:
-      - elknet
-
   elasticsearch:
     image: tianon/true
     restart: "no"
-    depends_on: [ "es01", "es02", "es03" ]
+    depends_on: [ "es01" ]
 
   kibana:
     build:
@@ -100,7 +58,7 @@ services:
       - /opt/elastic/logstash/config/logstash.yml:/usr/share/logstash/config/logstash.yml
       - /opt/elastic/logstash/pipeline:/usr/share/logstash/pipeline
     environment:
-      LS_JAVA_OPTS: "-Xmx256m -Xms256m"
+      LS_JAVA_OPTS: "-Xmx%LS_HEAP_SIZE%m -Xms%LS_HEAP_SIZE%m"
     networks:
       - elknet
 
