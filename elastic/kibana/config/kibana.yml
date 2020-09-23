@@ -1,7 +1,7 @@
 server.name: kibana
 server.host: 0.0.0.0
 
-elasticsearch.hosts: [ "https://es01:9200", "https://es02:9200", "https://es03:9200" ]
+elasticsearch.hosts: [ "https://es01:9200" ]
 
 xpack.security.enabled: "true"
 
