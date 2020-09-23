@@ -159,11 +159,11 @@ create_roles_users_beats() {
     echo "Creating ${beat}_writer role..."
     es-post "https://es01:9200/_xpack/security/role/${beat}_writer" -d"
       {
-        \"cluster\": [ \"monitor\", \"read_ilm\" ],
+        \"cluster\": [ \"monitor\", \"read_ilm\", \"manage_index_templates\", \"manage_ingest_pipelines\" ],
         \"indices\": [
           {
             \"names\": [ \"${beat}-*\" ],
-            \"privileges\": [ \"create_doc\", \"view_index_metadata\", \"create_index\" ]
+            \"privileges\": [ \"create_doc\", \"view_index_metadata\", \"create_index\", \"index\" ]
           }
         ]
       }"
