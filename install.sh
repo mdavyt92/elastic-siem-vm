@@ -544,10 +544,12 @@ EOF
   fi
 
   if $WAZUH_INSTALLED; then
-    read -p "Open Wazuh port (1514)? " -r
+    read -p "Open Wazuh ports (1514 and 1515)? " -r
     if  [[ $REPLY =~ ^[Yy]$ ]]
     then
       ufw route allow proto udp from any to $DOCKER_SUBNET port 1514
+      ufw route allow proto tcp from any to $DOCKER_SUBNET port 1514
+      ufw route allow proto tcp from any to $DOCKER_SUBNET port 1515
     fi
   fi
 
