@@ -30,9 +30,9 @@ copy_files() {
   echo "Copying Elastic Stack files..."
   if [ -e /opt/elastic ]
   then
-    read -p "Directory /opt/elastic exists. Do you want to delete it? " -r
+    read -p "Directory /opt/elastic exists. Do you want to delete it? (y/n) " -r
     echo
-    if [[ $REPLY =~ ^[Yy]$ ]]
+    if [[ $REPLY =~ ^[Yy] ]]
     then
       rm -rf /opt/elastic
       cp -r elastic /opt/elastic
@@ -202,9 +202,9 @@ create_roles_users_beats() {
 }
 
 install_kibana() {
-  read -p "Do you want to install Kibana? " -r
+  read -p "Do you want to install Kibana? (y/n) " -r
   echo
-  if [[ ! $REPLY =~ ^[Yy]$ ]]
+  if [[ ! $REPLY =~ ^[Yy] ]]
   then
     return
   fi
@@ -247,9 +247,9 @@ install_kibana() {
 }
 
 install_logstash() {
-  read -p "Do you want to install Logstash? " -r
+  read -p "Do you want to install Logstash? (y/n) " -r
   echo
-  if [[ ! $REPLY =~ ^[Yy]$ ]]
+  if [[ ! $REPLY =~ ^[Yy] ]]
   then
     return
   fi
@@ -298,9 +298,9 @@ install_logstash() {
 }
 
 install_elastalert() {
-  read -p "Do you want to install Elastalert? " -r
+  read -p "Do you want to install Elastalert? (y/n) " -r
   echo
-  if [[ ! $REPLY =~ ^[Yy]$ ]]
+  if [[ ! $REPLY =~ ^[Yy] ]]
   then
     return
   fi
@@ -345,9 +345,9 @@ install_elastalert() {
 }
 
 install_wazuh() {
-  read -p "Do you want to install Wazuh? " -r
+  read -p "Do you want to install Wazuh? (y/n) " -r
   echo
-  if [[ ! $REPLY =~ ^[Yy]$ ]]
+  if [[ ! $REPLY =~ ^[Yy] ]]
   then
     return
   fi
@@ -402,9 +402,9 @@ install_wazuh() {
 }
 
 install_services() {
-  read -p "Do you want to install services for elasticsearch, logstash and kibana? " -r
+  read -p "Do you want to install services for Elasticsearch, Logstash, Kibana, Elastalert and Wazuh? (y/n) " -r
   echo
-  if [[ ! $REPLY =~ ^[Yy]$ ]]
+  if [[ ! $REPLY =~ ^[Yy] ]]
   then
     return
   fi
@@ -433,9 +433,9 @@ install_services() {
 }
 
 install_apache(){
-  read -p "Do you want to install and configure an Apache Reverse Proxy? " -r
+  read -p "Do you want to install and configure an Apache Reverse Proxy? (y/n) " -r
   echo
-  if [[ ! $REPLY =~ ^[Yy]$ ]]
+  if [[ ! $REPLY =~ ^[Yy] ]]
   then
     return
   fi
@@ -521,31 +521,31 @@ EOF
   echo "Allowing SSH Connections through the firewall..."
   ufw allow ssh
 
-  read -p "Allow Elasticsearch to be accessed remotely? " -r
-  if  [[ $REPLY =~ ^[Yy]$ ]]
+  read -p "Allow Elasticsearch to be accessed remotely? (y/n) " -r
+  if  [[ $REPLY =~ ^[Yy] ]]
   then
     ufw route allow proto tcp from any to $DOCKER_SUBNET port 9200
   fi
 
   if $LOGSTASH_INSTALLED; then
-    read -p "Allow Logstash to be accessed remotely? " -r
-    if  [[ $REPLY =~ ^[Yy]$ ]]
+    read -p "Allow Logstash to be accessed remotely? (y/n) " -r
+    if  [[ $REPLY =~ ^[Yy] ]]
     then
       ufw route allow proto tcp from any to $DOCKER_SUBNET port 5044
     fi
   fi
 
   if $KIBANA_INSTALLED; then
-    read -p "Allow Kibana to be accessed remotely? (Not recommended if you installed Apache) " -r
-    if  [[ $REPLY =~ ^[Yy]$ ]]
+    read -p "Allow Kibana to be accessed remotely? (Not recommended if you installed Apache) (y/n) " -r
+    if  [[ $REPLY =~ ^[Yy] ]]
     then
       ufw route allow proto tcp from any to $DOCKER_SUBNET port 5601
     fi
   fi
 
   if $WAZUH_INSTALLED; then
-    read -p "Open Wazuh ports (1514 and 1515)? " -r
-    if  [[ $REPLY =~ ^[Yy]$ ]]
+    read -p "Open Wazuh ports (1514 and 1515)? (y/n) " -r
+    if  [[ $REPLY =~ ^[Yy] ]]
     then
       ufw route allow proto udp from any to $DOCKER_SUBNET port 1514
       ufw route allow proto tcp from any to $DOCKER_SUBNET port 1514
