@@ -335,7 +335,7 @@ install_elastalert() {
 
   echo; echo "elastalert_password=$elastalert_pass" | tee -a /opt/elastic/.passwords
 
-  sed -i "s/%ELASTALERT_PASSWORD%/$elastalert_pass/" "/opt/elastic/elastalert/elastalert.yaml"
+  sed -i "s/%ELASTALERT_PASSWORD%/$elastalert_pass/" '/opt/elastic/elastalert/elastalert.yaml'
 
   pushd /opt/docker-compose
   docker-compose up -d elastalert
@@ -383,14 +383,14 @@ install_wazuh() {
   sed -i "s/%WAZUH_PASSWORD%/$wazuh_password/" "/opt/elastic/filebeat-wazuh/filebeat.yml"
 
   echo "Downloading Wazuh Kibana app..."
-  curl https://github.com/wazuh/wazuh/archive/v3.13.2.zip -o /tmp/wazuh-app.zip
+  curl https://packages.wazuh.com/wazuhapp/wazuhapp-3.13.2_7.9.2.zip -o /tmp/wazuh-app.zip
   docker cp /tmp/wazuh-app.zip kibana:/wazuh-app.zip
 
   echo "Installing Wazuh Kibana app..."
   docker exec kibana bin/kibana-plugin install file:///wazuh-app.zip
 
   echo "Configuring Wazuh Kibana app..."
-  docker exec kibana sed -i 's/localhost/wazuh/' "/usr/share/kibana/optimize/wazuh/config/wazuh.yml"
+  docker exec kibana sed -i 's/localhost/wazuh/' '/usr/share/kibana/optimize/wazuh/config/wazuh.yml'
 
   echo "Starting Wazuh..."
   pushd /opt/docker-compose
