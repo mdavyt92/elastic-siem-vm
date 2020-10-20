@@ -383,7 +383,7 @@ install_wazuh() {
   sed -i "s/%WAZUH_PASSWORD%/$wazuh_password/" "/opt/elastic/filebeat-wazuh/filebeat.yml"
 
   echo "Downloading Wazuh Kibana app..."
-  curl https://packages.wazuh.com/wazuhapp/wazuhapp-3.13.2_7.9.1.zip -o /tmp/wazuh-app.zip
+  curl https://packages.wazuh.com/wazuhapp/wazuhapp-3.13.1_7.9.1.zip -o /tmp/wazuh-app.zip
   docker cp /tmp/wazuh-app.zip kibana:/wazuh-app.zip
 
   echo "Installing Wazuh Kibana app..."
