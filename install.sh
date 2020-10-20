@@ -5,7 +5,7 @@ if [[ $EUID -ne 0 ]]; then
    exit 1
 fi
 
-alias es-curl="source /opt/elastic/.passwords; docker exec es01 curl --silent --user elastic:$elastic_password --cacert /usr/share/elasticsearch/config/certificates/ca/ca.crt"
+alias escurl="source /opt/elastic/.passwords; docker exec es01 curl --silent --user elastic:$elastic_password --cacert /usr/share/elasticsearch/config/certificates/ca/ca.crt"
 alias es-post="escurl -H "Content-Type: application/json" -XPOST"
 
 install_docker() {
