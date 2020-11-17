@@ -63,7 +63,7 @@ services:
       - elknet
 
   elastalert:
-    image: jertel/elastalert-docker
+    image: jertel/elastalert-docker:0.2.4
     volumes:
       - certs:/usr/share/elasticsearch/config/certificates
       - /opt/elastic/elastalert/elastalert.yaml:/opt/config/elastalert_config.yaml
