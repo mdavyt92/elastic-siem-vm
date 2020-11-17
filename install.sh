@@ -352,8 +352,11 @@ install_filebeat() {
   then
     return
   fi
+  
+  sed -i "s/%FILEBEAT_SETUP_PASSWORD%/$filebeat_setup_user_password/" "/opt/elastic/filebeat/filebeat_setup.yml"
 
   pushd /opt/docker-compose
+  docker-compose up filebeat_setup
   docker-compose up -d filebeat
   popd
 
@@ -445,6 +448,7 @@ install_services() {
   $KIBANA_INSTALLED && systemctl enable kibana && systemctl start kibana
   $LOGSTASH_INSTALLED && systemctl enable logstash && systemctl start logstash
   $ELASTALERT_INSTALLED && systemctl enable elastalert && systemctl start elastalert
+  $FILEBEAT_INSTALLED && systemctl enable filebeat && systemctl start filebeat
   $WAZUH_INSTALLED && systemctl enable wazuh && systemctl start wazuh
 }
 
