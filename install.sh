@@ -14,6 +14,7 @@ install_docker() {
 
   echo "Installing docker..."
   apt -y install docker.io docker-compose
+  systemctl restart docker
 }
 
 wait_elastic() {
