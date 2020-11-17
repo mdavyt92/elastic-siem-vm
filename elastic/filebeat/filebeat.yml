@@ -1,0 +1,13 @@
+filebeat.config.modules:
+  enabled: true
+  path: ${path.config}/modules.d/*.yml
+
+filebeat.modules:
+  - module: fortinet
+    firewall:
+      var.syslog_host: 0.0.0.0
+    clientendpoint:
+      enabled: false
+
+output.logstash:
+  hosts: ["logstash:5044"]
