@@ -1,0 +1,23 @@
+[Unit]
+Description=filebeat
+Requires=docker.service network-online.target
+After=docker.service network-online.target
+
+[Service]
+WorkingDirectory=/opt/docker-compose
+Type=simple
+TimeoutStartSec=15min
+Restart=always
+
+ExecStartPre=/usr/bin/docker-compose pull --quiet --ignore-pull-failures filebeat
+ExecStartPre=/usr/bin/docker-compose build --pull filebeat
+
+ExecStart=/usr/bin/docker-compose up --remove-orphans filebeat
+
+ExecStop=/usr/bin/docker-compose down --remove-orphans filebeat
+
+ExecReload=/usr/bin/docker-compose pull --quiet --ignore-pull-failures filebeat
+ExecReload=/usr/bin/docker-compose build --pull filebeat
+
+[Install]
+WantedBy=multi-user.target
