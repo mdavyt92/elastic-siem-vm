@@ -1,0 +1,18 @@
+setup.template.settings:
+  index:
+    max_docvalue_fields_search: 200
+
+filebeat.config.modules:
+  enabled: true
+  path: ${path.config}/modules.d/*.yml
+
+output.elasticsearch:
+  hosts: ["es01:9200"]
+  pipeline: geoip-info
+  protocol: "https"
+  ssl.verification_mode: none
+  username: "filebeat_setup_user"
+  password: "%FILEBEAT_SETUP_PASSWORD%"
+
+setup.kibana:
+  host: "http://kibana:5601"
