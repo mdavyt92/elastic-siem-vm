@@ -553,6 +553,14 @@ EOF
       ufw route allow proto tcp from any to $DOCKER_SUBNET port 1515
     fi
   fi
+  
+  if $FILEBEAT_INSTALLED; then
+    read -p "Open Syslog port (514/udp)? (y/n) " -r
+    if  [[ $REPLY =~ ^[Yy] ]]
+    then
+      ufw route allow proto udp from any to $DOCKER_SUBNET port 9004
+    fi
+  fi
 
   echo "Enabling firewall..."
   ufw enable
@@ -560,6 +568,10 @@ EOF
   echo "Restarting UFW..."
   systemctl restart ufw
 }
+
+exec > >(tee -a install.log)
+echo "Starting installation..."
+date
 
 # Pre installation
 install_docker
