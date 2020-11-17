@@ -345,6 +345,21 @@ install_elastalert() {
   ELASTALERT_INSTALLED=true
 }
 
+install_filebeat() {
+  read -p "Do you want to install Filebeat? (y/n) " -r
+  echo
+  if [[ ! $REPLY =~ ^[Yy] ]]
+  then
+    return
+  fi
+
+  pushd /opt/docker-compose
+  docker-compose up -d filebeat
+  popd
+
+  FILEBEAT_INSTALLED=true
+}
+
 install_wazuh() {
   read -p "Do you want to install Wazuh? (y/n) " -r
   echo
@@ -585,6 +600,7 @@ install_logstash
 
 # Other tools
 install_elastalert
+install_filebeat
 install_wazuh
 
 # Beats users and roles
