@@ -517,6 +517,7 @@ configure_firewall(){
 
 # Custom rules
 -A DOCKER-USER -j ufw-user-forward
+-A DOCKER-USER -m conntrack --ctstate ESTABLISHED,RELATED -j RETURN
 
 # Deny everything going to the Docker Containers
 -A DOCKER-USER -j DROP -p tcp -d %DOCKER_SUBNET%
