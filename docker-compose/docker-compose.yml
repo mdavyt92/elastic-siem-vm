@@ -82,6 +82,8 @@ services:
       - certs:/usr/share/elasticsearch/config/certificates
       - /opt/elastic/filebeat-wazuh/filebeat.yml:/etc/filebeat/filebeat.yml
       - /opt/elastic/filebeat-wazuh/module/wazuh:/usr/share/filebeat/module/wazuh
+      - /opt/elastic/wazuh/ossec.conf:/var/ossec/etc/ossec.conf
+      - /opt/elastic/wazuh/feeds:/feeds
 
   filebeat:
     build:
