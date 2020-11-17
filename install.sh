@@ -410,6 +410,11 @@ install_wazuh() {
 
   echo "Configuring Wazuh Kibana app..."
   docker exec kibana sed -i 's/localhost/wazuh/' '/usr/share/kibana/optimize/wazuh/config/wazuh.yml'
+  
+  echo "Configuring vulnerability feeds..."
+  set -f
+  echo $(crontab -l ; echo '0 * * * * /opt/elastic/wazuh/feeds/nvd-generator.sh 2010 /opt/elastic/wazuh/feeds/') | crontab -
+  set +f
 
   echo "Starting Wazuh..."
   pushd /opt/docker-compose
