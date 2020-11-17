@@ -2,7 +2,7 @@ version: '3.7'
 
 services:
 
-  es01:
+  elasticsearch:
     build:
       context: elasticsearch/
       args:
@@ -24,11 +24,6 @@ services:
       - 9200:9200
     networks:
       - elknet
-
-  elasticsearch:
-    image: tianon/true
-    restart: "no"
-    depends_on: [ "es01" ]
 
   kibana:
     build:
@@ -88,6 +83,32 @@ services:
       - /opt/elastic/filebeat-wazuh/filebeat.yml:/etc/filebeat/filebeat.yml
       - /opt/elastic/filebeat-wazuh/module/wazuh:/usr/share/filebeat/module/wazuh
 
+  filebeat:
+    build:
+      context: filebeat/
+      args:
+        ELASTIC_VERSION: $ELASTIC_VERSION
+    ports:
+      - "514:9004/udp"
+    container_name: filebeat
+    hostname: filebeat
+    entrypoint: filebeat -e
+    networks:
+      - elknet
+    volumes:
+      - certs:/usr/share/elasticsearch/config/certificates
+      - /opt/elastic/filebeat/filebeat.yml:/usr/share/filebeat/filebeat.yml
+
+  filebeat_setup:
+    build:
+      context: filebeat/
+      args:
+        ELASTIC_VERSION: $ELASTIC_VERSION
+    volumes:
+      - /opt/elastic/filebeat/filebeat_setup.yml:/usr/share/filebeat/filebeat.yml
+    networks:
+      - elknet
+    entrypoint: filebeat setup --modules fortinet -e -E 'setup.dashboards.enabled=true'
 
 volumes:
   esdata01:
