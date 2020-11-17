@@ -608,13 +608,13 @@ install_elasticsearch
 install_kibana
 install_logstash
 
+# Beats users and roles
+create_roles_users_beats
+
 # Other tools
 install_elastalert
 install_filebeat
 install_wazuh
-
-# Beats users and roles
-create_roles_users_beats
 
 # Services for starting/stopping the stack
 install_services
