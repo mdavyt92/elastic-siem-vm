@@ -43,3 +43,8 @@ rm -f /etc/systemd/system/elasticsearch.service
 rm -f /etc/systemd/system/logstash.service
 rm -f /etc/systemd/system/kibana.service
 rm -f /etc/systemd/system/elastalert.service
+rm -f /etc/systemd/system/filebeat.service
+rm -f /etc/systemd/system/wazuh.service
+
+apt remove docker.io docker-compose apache2
+apt autoremove
