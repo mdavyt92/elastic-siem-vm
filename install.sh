@@ -438,6 +438,7 @@ install_services() {
   $KIBANA_INSTALLED && cp services/kibana.service /etc/systemd/system/
   $LOGSTASH_INSTALLED && cp services/logstash.service /etc/systemd/system/
   $ELASTALERT_INSTALLED && cp services/elastalert.service /etc/systemd/system/
+  $FILEBEAT_INSTALLED && cp services/filebeat.service /etc/systemd/system/
   $WAZUH_INSTALLED && cp services/wazuh.service /etc/systemd/system/
 
   echo "Reloading systemctl daemon..."
