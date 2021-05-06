@@ -8,12 +8,28 @@ fi
 alias escurl='source /opt/elastic/.passwords; docker exec es01 curl --silent --user elastic:$elastic_password --cacert /usr/share/elasticsearch/config/certificates/ca/ca.crt'
 alias es-post='escurl -H "Content-Type: application/json" -XPOST'
 
-install_docker() {
+detect_OS() {
+  echo "Detecting OS..."
+  source /etc/os-release
+  OS_FAMILY=$ID
+  echo "OS detected: $OS_FAMILY"
+}
+
+install_docker_ubuntu() {
   echo "Updating package list..."
   apt -y update
 
   echo "Installing docker..."
   apt -y install docker.io docker-compose
+  systemctl restart docker
+}
+
+install_docker_centos() {
+  echo "Updating package list..."
+  yum -y update
+
+  echo "Installing docker..."
+  yum -y install docker.io docker-compose
   systemctl restart docker
 }
 
@@ -458,7 +474,7 @@ install_services() {
   $WAZUH_INSTALLED && systemctl enable wazuh && systemctl start wazuh
 }
 
-install_apache(){
+install_apache_ubuntu(){
   read -p "Do you want to install and configure an Apache Reverse Proxy? (y/n) " -r
   echo
   if [[ ! $REPLY =~ ^[Yy] ]]
@@ -510,7 +526,158 @@ install_apache(){
   ufw allow https
 }
 
-configure_firewall(){
+install_apache_centos(){
+  read -p "Do you want to install and configure an Apache Reverse Proxy? (y/n) " -r
+  echo
+  if [[ ! $REPLY =~ ^[Yy] ]]
+  then
+    return
+  fi
+
+  echo "Installing apache..."
+  yum -y install epel-release
+  yum -y install httpd  
+  
+  echo "Removing default configuration..."
+  rm -f /etc/httpd/conf/*
+  rm -f /etc/httpd/conf.d*
+
+  echo "Copying configuration files..."
+  cp centos/conf/* /etc/httpd/conf/
+  cp centos/httpd/conf.d/* /etc/httpd/conf.d/
+
+  echo "Generating self-signed certificate..."
+  mkdir /etc/httpd/certs
+  openssl req -x509 -nodes -days 365 -newkey rsa:2048 -keyout /etc/apache2/certs/selfsigned.key -out /etc/apache2/certs/selfsigned.crt
+
+  echo "Select your preferred TLS configuration:"
+  tls_high="Modern (highest security, highest compatibility): Supports Firefox 63, Android 10.0, Chrome 70, Edge 75, Java 11, OpenSSL 1.1.1, Opera 57, and Safari 12.1"
+  tls_med="Intermediate (recommended for most cases): Supports Firefox 27, Android 4.4.2, Chrome 31, Edge, IE 11 on Windows 7, Java 8u31, OpenSSL 1.0.1, Opera 20, and Safari 9"
+  tls_low="Old (lowest security, highest compatibility): Supports Firefox 1, Android 2.3, Chrome 1, Edge 12, IE8 on Windows XP, Java 6, OpenSSL 0.9.8, Opera 5, and Safari 1"
+  select tlslevel in "$tls_high" "$tls_med" "$tls_low"; do
+    case $tlslevel in
+      ${tls_high} ) TLS_LEVEL="high"; break;;
+      ${tls_med} ) TLS_LEVEL="medium"; break;;
+      ${tls_low} ) TLS_LEVEL="low"; break;;
+      * ) echo "Please select a valid option.";
+    esac
+  done
+
+  echo "Configuring selected TLS profile..."
+  sed -i "s/%TLS_LEVEL%/$TLS_LEVEL/" /etc/httpd/conf/httpd.conf
+
+  echo "Enabling required modules and site..."
+  tee -a /etc/httpd/conf.modules.d/00-base.conf <<END  
+  LoadModule ssl_module modules/mod_ssl.so
+  LoadModule mod_headers modules/mod_headers.so
+  LoadModule http2_module modules/mod_http2.so
+  LoadModule socache_shmcb_module modules/mod_socache_shmcb.so
+  LoadModule rewrite_module modules/mod_rewrite.so
+  LoadModule proxy_module modules/mod_proxy.so
+  LoadModule proxy_http_module modules/mod_proxy_http.so
+  END
+
+}
+
+configure_firewall_ubuntu(){
+
+  echo -n "Getting Elastic subnet..."
+  DOCKER_SUBNET=`docker network inspect elastic_elknet | grep -oP '"Subnet": "\K\d+\.\d+\.\d+\.\d+\/\d+'`
+  echo $DOCKER_SUBNET
+
+  echo "Configuring UFW-DOCKER rules..."
+  cat <<EOF | tee -a /etc/ufw/after.rules
+
+# BEGIN UFW AND DOCKER
+*filter
+:ufw-user-forward - [0:0]
+:DOCKER-USER - [0:0]
+# Allow everything coming from the Docker Containers
+-A DOCKER-USER -j RETURN -s %DOCKER_SUBNET%
+
+# Custom rules
+-A DOCKER-USER -j ufw-user-forward
+-A DOCKER-USER -m conntrack --ctstate ESTABLISHED,RELATED -j RETURN
+
+# Deny everything going to the Docker Containers
+-A DOCKER-USER -j DROP -p tcp -d %DOCKER_SUBNET%
+-A DOCKER-USER -j DROP -p udp -d %DOCKER_SUBNET%
+
+-A DOCKER-USER -j RETURN
+COMMIT
+# END UFW AND DOCKER
+EOF
+
+  sed -i "s#%DOCKER_SUBNET%#$DOCKER_SUBNET#" /etc/ufw/after.rules
+
+  echo "Configuring Firewall policy..."
+  ufw default deny incoming
+  ufw default allow outgoing
+  ufw default deny routed
+
+  echo "Allowing SSH Connections through the firewall..."
+  ufw allow ssh
+
+  read -p "Allow Elasticsearch to be accessed remotely? (y/n) " -r
+  if  [[ $REPLY =~ ^[Yy] ]]
+  then
+    ufw route allow proto tcp from any to $DOCKER_SUBNET port 9200
+  fi
+
+  if $LOGSTASH_INSTALLED; then
+    read -p "Allow Logstash to be accessed remotely? (y/n) " -r
+    if  [[ $REPLY =~ ^[Yy] ]]
+    then
+      ufw route allow proto tcp from any to $DOCKER_SUBNET port 5044
+    fi
+  fi
+
+  if $KIBANA_INSTALLED; then
+    read -p "Allow Kibana to be accessed remotely? (Not recommended if you installed Apache) (y/n) " -r
+    if  [[ $REPLY =~ ^[Yy] ]]
+    then
+      ufw route allow proto tcp from any to $DOCKER_SUBNET port 5601
+    fi
+  fi
+
+  if $WAZUH_INSTALLED; then
+    read -p "Open Wazuh ports (1514 and 1515)? (y/n) " -r
+    if  [[ $REPLY =~ ^[Yy] ]]
+    then
+      ufw route allow proto udp from any to $DOCKER_SUBNET port 1514
+      ufw route allow proto tcp from any to $DOCKER_SUBNET port 1514
+      ufw route allow proto tcp from any to $DOCKER_SUBNET port 1515
+    fi
+  fi
+  
+  if $FILEBEAT_INSTALLED; then
+    read -p "Open Syslog port (514/udp)? (y/n) " -r
+    if  [[ $REPLY =~ ^[Yy] ]]
+    then
+      ufw route allow proto udp from any to $DOCKER_SUBNET port 9004
+    fi
+  fi
+
+  echo "Enabling firewall..."
+  ufw enable
+
+  echo "Restarting UFW..."
+  systemctl restart ufw
+}
+
+configure_firewall_centos(){
+  
+  echo "Installing UFW..."
+  yum -y install ufw
+  
+  echo "Allowing Apache through the firewall..."
+  ufw allow http
+  ufw allow https
+  
+  echo "Restarting apache..."
+  systemctl restart httpd
+  systemctl enable httpd
+
   echo -n "Getting Elastic subnet..."
   DOCKER_SUBNET=`docker network inspect elastic_elknet | grep -oP '"Subnet": "\K\d+\.\d+\.\d+\.\d+\/\d+'`
   echo $DOCKER_SUBNET
@@ -600,7 +767,8 @@ echo "Starting installation..."
 date
 
 # Pre installation
-install_docker
+detect_OS
+install_docker_$OS_FAMILY
 copy_files
 
 # ELK Stack
@@ -621,7 +789,7 @@ install_wazuh
 install_services
 
 # Apache Reverse Proxy
-install_apache
+install_apache_$OS_FAMILY
 
 # Firewall
-configure_firewall
+configure_firewall_$OS_FAMILY
