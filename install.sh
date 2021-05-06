@@ -29,7 +29,9 @@ install_docker_centos() {
   yum -y update
 
   echo "Installing docker..."
-  yum -y install docker.io docker-compose
+  yum -y install docker
+  curl -L "https://github.com/docker/compose/releases/download/1.26.2/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+  chmod +x /usr/local/bin/docker-compose
   systemctl restart docker
 }
 
@@ -567,7 +569,7 @@ install_apache_centos(){
   sed -i "s/%TLS_LEVEL%/$TLS_LEVEL/" /etc/httpd/conf/httpd.conf
 
   echo "Enabling required modules and site..."
-  tee -a /etc/httpd/conf.modules.d/00-base.conf <<EOT  
+  cat <<EOF | tee -a /etc/httpd/conf.modules.d/00-base.conf <<EOT  
   LoadModule ssl_module modules/mod_ssl.so
   LoadModule mod_headers modules/mod_headers.so
   LoadModule http2_module modules/mod_http2.so
@@ -575,7 +577,7 @@ install_apache_centos(){
   LoadModule rewrite_module modules/mod_rewrite.so
   LoadModule proxy_module modules/mod_proxy.so
   LoadModule proxy_http_module modules/mod_proxy_http.so
-  EOT
+  EOF
 
 }
 
