@@ -571,7 +571,7 @@ install_apache_centos(){
   sed -i "s/%TLS_LEVEL%/$TLS_LEVEL/" /etc/httpd/conf/httpd.conf
 
   echo "Enabling required modules..."
-  cat <<EOF | tee -a /etc/httpd/conf.modules.d/00-base.conf <<EOT  
+  cat <<EOF | tee -a /etc/httpd/conf.modules.d/00-base.conf
   LoadModule ssl_module modules/mod_ssl.so
   LoadModule mod_headers modules/mod_headers.so
   LoadModule http2_module modules/mod_http2.so
