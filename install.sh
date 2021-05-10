@@ -543,16 +543,16 @@ install_apache_centos(){
   yum -y install httpd  
   
   echo "Removing default configuration..."
-  rm -f /etc/httpd/conf/*
-  rm -f /etc/httpd/conf.d*
+  rm -rf /etc/httpd/conf
+  rm -rf /etc/httpd/conf.d
 
   echo "Copying configuration files..."
-  cp centos/conf/* /etc/httpd/conf/
-  cp centos/httpd/conf.d/* /etc/httpd/conf.d/
+  cp apache/centos/conf/* /etc/httpd/conf/
+  cp apache/centos/httpd/conf.d/* /etc/httpd/conf.d/
 
   echo "Generating self-signed certificate..."
   mkdir /etc/httpd/certs
-  openssl req -x509 -nodes -days 365 -newkey rsa:2048 -keyout /etc/apache2/certs/selfsigned.key -out /etc/apache2/certs/selfsigned.crt
+  openssl req -x509 -nodes -days 365 -newkey rsa:2048 -keyout /etc/httpd/certs/selfsigned.key -out /etc/httpd/certs/selfsigned.crt
 
   echo "Select your preferred TLS configuration:"
   tls_high="Modern (highest security, highest compatibility): Supports Firefox 63, Android 10.0, Chrome 70, Edge 75, Java 11, OpenSSL 1.1.1, Opera 57, and Safari 12.1"
@@ -570,7 +570,7 @@ install_apache_centos(){
   echo "Configuring selected TLS profile..."
   sed -i "s/%TLS_LEVEL%/$TLS_LEVEL/" /etc/httpd/conf/httpd.conf
 
-  echo "Enabling required modules and site..."
+  echo "Enabling required modules..."
   cat <<EOF | tee -a /etc/httpd/conf.modules.d/00-base.conf <<EOT  
   LoadModule ssl_module modules/mod_ssl.so
   LoadModule mod_headers modules/mod_headers.so
