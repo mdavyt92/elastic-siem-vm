@@ -572,14 +572,14 @@ install_apache_centos(){
 
   echo "Enabling required modules..."
   cat <<EOF | tee -a /etc/httpd/conf.modules.d/00-base.conf
-  LoadModule ssl_module modules/mod_ssl.so
-  LoadModule mod_headers modules/mod_headers.so
-  LoadModule http2_module modules/mod_http2.so
-  LoadModule socache_shmcb_module modules/mod_socache_shmcb.so
-  LoadModule rewrite_module modules/mod_rewrite.so
-  LoadModule proxy_module modules/mod_proxy.so
-  LoadModule proxy_http_module modules/mod_proxy_http.so
-  EOF
+LoadModule ssl_module modules/mod_ssl.so
+LoadModule mod_headers modules/mod_headers.so
+LoadModule http2_module modules/mod_http2.so
+LoadModule socache_shmcb_module modules/mod_socache_shmcb.so
+LoadModule rewrite_module modules/mod_rewrite.so
+LoadModule proxy_module modules/mod_proxy.so
+LoadModule proxy_http_module modules/mod_proxy_http.so
+EOF
 
 }
 
