@@ -548,6 +548,8 @@ install_apache_centos(){
   rm -rf /etc/httpd/conf.d
 
   echo "Copying configuration files..."
+  mkdir /etc/httpd/conf/
+  mkdir /etc/httpd/conf.d/
   cp apache/centos/conf/* /etc/httpd/conf/
   cp apache/centos/httpd/conf.d/* /etc/httpd/conf.d/
 
@@ -572,6 +574,7 @@ install_apache_centos(){
   sed -i "s/%TLS_LEVEL%/$TLS_LEVEL/" /etc/httpd/conf/httpd.conf
 
   echo "Enabling required modules..."
+  yum -y install mod_ssl
   cat <<EOF | tee -a /etc/httpd/conf.modules.d/00-base.conf
 LoadModule ssl_module modules/mod_ssl.so
 LoadModule headers_module modules/mod_headers.so
