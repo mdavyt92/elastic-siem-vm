@@ -575,6 +575,12 @@ install_apache_centos(){
 
   echo "Enabling required modules..."
   yum -y install mod_ssl
+  httpd --enable-headers
+  httpd --enable-http2
+  httpd --enable-socache_shmcb
+  httpd --enable-rewrite
+  httpd --enable-proxy
+  httpd --enable-proxy_http
   cat <<EOF | tee -a /etc/httpd/conf.modules.d/00-base.conf
 LoadModule ssl_module modules/mod_ssl.so
 LoadModule headers_module modules/mod_headers.so
