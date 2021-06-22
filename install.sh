@@ -541,6 +541,10 @@ install_apache_centos(){
 
   echo "Installing apache..."
   yum -y install epel-release
+  yum -y install wget
+  pushd /etc/yum.repos.d
+  wget https://repo.codeit.guru/codeit.el`rpm -q --qf "%{VERSION}" $(rpm -q --whatprovides redhat-release)`.repo
+  popd
   yum -y install httpd  
   
   echo "Removing default configuration..."
